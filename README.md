@@ -72,7 +72,7 @@ deploy/
 3. ✅ Responden: halaman /f/:slug ala Google Forms + submit tervalidasi
 4. ✅ Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
 5. ✅ Kuis: nilai + pembahasan per soal, statistik nilai, koreksi manual
-6. Hardening: rate-limit submit, backup, uji penuh + restyle builder ala Google Forms
+6. ✅ Hardening + restyle builder ala Google Forms + uji penuh (45 bun test + 10 e2e Playwright)
 
 ## Deploy
 

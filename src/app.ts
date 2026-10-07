@@ -28,6 +28,14 @@ export async function bootApp(dataDir: string) {
     c.header("X-Content-Type-Options", "nosniff");
     c.header("X-Frame-Options", "SAMEORIGIN");
     c.header("Referrer-Policy", "no-referrer-when-downgrade");
+    // CSP: semua script & style dari origin sendiri; tanpa inline script.
+    // style 'unsafe-inline' diizinkan untuk lebar grafik batang dinamis.
+    c.header(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data:; connect-src 'self'; font-src 'self'; " +
+        "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+    );
   });
 
   app.get("/api/health", (c) =>

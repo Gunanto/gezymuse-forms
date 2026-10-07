@@ -11,6 +11,19 @@ const submits = new Map<string, { count: number; resetAt: number }>();
 const MAX_SUBMITS = 20;
 const WINDOW_MS = 10 * 60 * 1000;
 
+// Rate-limit baca skema publik: 120x / IP / 10 menit -> 429 (anti scraping).
+const reads = new Map<string, { count: number; resetAt: number }>();
+const MAX_READS = 120;
+
+function hit(map: Map<string, { count: number; resetAt: number }>, ip: string, max: number): boolean {
+  const now = Date.now();
+  const rec = map.get(ip);
+  if (rec && now < rec.resetAt && rec.count >= max) return true;
+  if (!rec || now >= rec.resetAt) map.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+  else rec.count++;
+  return false;
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -55,6 +68,8 @@ function publicQuestion(q: any) {
 
 pub.get("/forms/:slug", (c) => {
   const db = getDb();
+  if (hit(reads, clientIp(c), MAX_READS))
+    return c.json({ error: "Terlalu banyak permintaan. Coba lagi nanti." }, 429);
   const av = checkAvailability(db, c.req.param("slug"));
   if (!av.ok) return c.json({ error: av.error }, av.status);
   let questions = (
@@ -140,9 +155,7 @@ function scoreQuestion(q: any, value: unknown): number {
 pub.post("/forms/:slug/submit", async (c) => {
   const db = getDb();
   const ip = clientIp(c);
-  const now = Date.now();
-  const rec = submits.get(ip);
-  if (rec && now < rec.resetAt && rec.count >= MAX_SUBMITS)
+  if (hit(submits, ip, MAX_SUBMITS))
     return c.json({ error: "Terlalu banyak pengiriman. Coba lagi beberapa menit." }, 429);
 
   const av = checkAvailability(db, c.req.param("slug"));
@@ -210,10 +223,6 @@ pub.post("/forms/:slug/submit", async (c) => {
     return rid;
   });
   tx();
-
-  const r = submits.get(ip);
-  if (!r || now >= r.resetAt) submits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-  else r.count++;
 
   const out: Record<string, unknown> = { ok: true, message: "Jawaban terkirim. Terima kasih!" };
   if (isQuiz && s.show_score !== false) {

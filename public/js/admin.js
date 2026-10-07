@@ -40,6 +40,29 @@ function toast(msg, isErr = false) {
 function show(view) {
   for (const v of ["loginCard", "dashView", "editorView", "resultsView"]) $(v).hidden = v !== view;
   $("btnLogout").hidden = view === "loginCard";
+  $("mainBrand").hidden = view === "editorView"; // editor punya topbar sendiri
+}
+
+function showPane(p) {
+  $("paneQ").hidden = p !== "Q";
+  $("paneS").hidden = p !== "S";
+  $("tabQ").classList.toggle("active", p === "Q");
+  $("tabS").classList.toggle("active", p === "S");
+  window.scrollTo(0, 0);
+}
+
+function updatePublishBtn() {
+  const on = !!state.form.is_published;
+  const b = $("btnPublishTop");
+  b.textContent = on ? "✓ Terpublikasi" : "Publikasikan";
+  b.classList.toggle("is-off", on);
+  $("pubState").textContent = on ? "Formulir bisa diisi responden." : "Draf — responden belum bisa mengisi.";
+}
+
+function updateAnswerBadge() {
+  const n = state.form.response_count || 0;
+  $("tabABadge").hidden = !n;
+  $("tabABadge").textContent = n;
 }
 
 /* ---------- auth ---------- */
@@ -152,10 +175,13 @@ async function openEditor(id) {
     state.editingQ = null;
     // meta
     $("fTitle").value = form.title;
+    $("fTitleTop").value = form.title;
     $("fDesc").value = form.description || "";
-    $("fPublished").checked = form.is_published;
     $("fLink").textContent = location.origin + "/f/" + form.slug;
     $("fOpen").href = "/f/" + form.slug;
+    updatePublishBtn();
+    updateAnswerBadge();
+    showPane("Q");
     // settings
     const s = form.settings || {};
     $("sAccept").checked = s.accept_responses !== false;
@@ -185,7 +211,6 @@ async function openEditorKeepScroll() {
 
 function renderQuestions() {
   const qs = [...state.questions].sort((a, b) => a.order_index - b.order_index);
-  $("qCount").textContent = qs.length;
   const box = $("qList");
   if (!qs.length) {
     box.innerHTML = `<p class="muted">Belum ada soal. Tambahkan di bawah 👇</p>`;
@@ -261,13 +286,12 @@ function renderQFields() {
   const t = $("qType").value;
   const isChoice = CHOICE_TYPES.includes(t);
   $("qOptions").innerHTML = "";
+  $("qOptions").dataset.t = t;
   $("qScale").hidden = t !== "linear_scale";
   if (isChoice) {
     $("qOptions").innerHTML = `
-      <label>Opsi jawaban (min. 2)
-        <div id="optList"></div>
-        <button type="button" id="btnAddOpt" class="btn small ghost">＋ Tambah opsi</button>
-      </label>`;
+      <div id="optList"></div>
+      <button type="button" id="btnAddOpt" class="btn small ghost">＋ Tambahkan opsi</button>`;
     const addOpt = (val = "") => {
       const row = document.createElement("div");
       row.className = "optrow";
@@ -363,8 +387,9 @@ function collectQuestion() {
 
 function resetQForm() {
   state.editingQ = null;
-  $("qFormTitle").textContent = "＋ Tambah soal";
   $("btnCancelQ").hidden = true;
+  $("btnDupQ").hidden = true;
+  $("btnDelQ").hidden = true;
   $("qType").value = "short_text";
   $("qPrompt").value = "";
   $("qRequired").checked = false;
@@ -378,8 +403,9 @@ function startEdit(id) {
   const q = state.questions.find((x) => x.id === id);
   if (!q) return;
   state.editingQ = q;
-  $("qFormTitle").textContent = "✏️ Ubah soal";
   $("btnCancelQ").hidden = false;
+  $("btnDupQ").hidden = false;
+  $("btnDelQ").hidden = false;
   $("qType").value = q.qtype;
   $("qPrompt").value = q.prompt;
   $("qRequired").checked = q.required;
@@ -410,7 +436,8 @@ function startEdit(id) {
     $("sMaxLabel").value = q.options.maxLabel || "";
   }
   renderCorrect();
-  $("qFormTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("qEditorCard").scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => $("qPrompt").focus(), 350);
 }
 
 async function saveQuestion() {
@@ -437,9 +464,10 @@ async function saveMeta() {
     const { form } = await api(`/api/forms/${state.form.id}`, "PATCH", {
       title: $("fTitle").value,
       description: $("fDesc").value,
-      is_published: $("fPublished").checked,
     });
-    state.form = { ...state.form, ...form };
+    const qc = state.form.question_count, rc = state.form.response_count;
+    state.form = { ...state.form, ...form, question_count: qc, response_count: rc };
+    $("fTitleTop").value = state.form.title;
     toast("Pengaturan tersimpan");
     renderQuestions(); // badge kuis bisa berubah
   } catch (e) {
@@ -463,10 +491,22 @@ async function saveSettings() {
         max_responses: mr === "" ? null : Number(mr),
       },
     });
-    state.form = { ...state.form, ...form };
+    state.form = { ...state.form, ...form, question_count: state.form.question_count, response_count: state.form.response_count };
     toast("Opsi tersimpan");
     renderQuestions();
     renderCorrect();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function duplicateQuestion() {
+  if (!state.editingQ) { toast("Buka soal dulu dengan tombol Ubah", true); return; }
+  try {
+    await api(`/api/forms/${state.form.id}/questions`, "POST", collectQuestion());
+    toast("Soal diduplikat");
+    await refreshEditor();
+    resetQForm();
   } catch (e) {
     toast(e.message, true);
   }
@@ -499,6 +539,45 @@ $("btnSaveMeta").addEventListener("click", saveMeta);
 $("btnSaveSettings").addEventListener("click", saveSettings);
 $("btnSaveQ").addEventListener("click", saveQuestion);
 $("btnCancelQ").addEventListener("click", resetQForm);
+$("btnDupQ").addEventListener("click", duplicateQuestion);
+$("btnDelQ").addEventListener("click", async () => {
+  if (!state.editingQ) return;
+  if (!confirm("Hapus soal ini?")) return;
+  try {
+    await api(`/api/questions/${state.editingQ.id}`, "DELETE");
+    toast("Soal dihapus");
+    await refreshEditor();
+    resetQForm();
+  } catch (e) { toast(e.message, true); }
+});
+$("tabQ").addEventListener("click", () => showPane("Q"));
+$("tabS").addEventListener("click", () => showPane("S"));
+$("tabA").addEventListener("click", async () => {
+  if (!state.form) return;
+  try { // segarkan jumlah respons sebelum buka tab Jawaban
+    const { form } = await api(`/api/forms/${state.form.id}`);
+    state.form = form;
+    updateAnswerBadge();
+  } catch (e) { /* openResults akan menampilkan errornya */ }
+  openResults(state.form.id);
+});
+$("fTitleTop").addEventListener("input", () => { $("fTitle").value = $("fTitleTop").value; });
+$("btnPublishTop").addEventListener("click", async () => {
+  const next = !state.form.is_published;
+  try {
+    const { form } = await api(`/api/forms/${state.form.id}`, "PATCH", { is_published: next });
+    state.form = { ...state.form, ...form };
+    updatePublishBtn();
+    toast(next ? "Formulir dipublikasikan — bisa diisi responden" : "Publikasi dibatalkan");
+  } catch (e) { toast(e.message, true); }
+});
+$("tbAdd").addEventListener("click", () => {
+  showPane("Q");
+  resetQForm();
+  $("qEditorCard").scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => $("qPrompt").focus(), 350);
+});
+$("tbPreview").addEventListener("click", () => window.open("/f/" + state.form.slug, "_blank"));
 $("btnCopy").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText($("fLink").textContent);

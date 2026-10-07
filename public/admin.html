@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GezyForm — Admin</title>
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/form.css">
 </head>
 <body>
 <div class="wrap wide">
-  <header class="brand">
+  <header class="brand" id="mainBrand">
     <span class="logo">📝</span>
     <div><h1>GezyForm</h1><p>Admin formulir</p></div>
     <div class="spacer"></div>
@@ -44,85 +45,99 @@
   </section>
 
   <section id="editorView" hidden>
-    <button id="btnBack" class="btn ghost small">← Semua formulir</button>
+    <header class="gf-topbar">
+      <a id="btnBack" class="gf-back" title="Semua formulir">📝</a>
+      <input id="fTitleTop" class="gf-doc-title" placeholder="Formulir tanpa judul" autocomplete="off">
+      <nav class="gf-tabs">
+        <button id="tabQ" class="gf-tab active">Pertanyaan</button>
+        <button id="tabA" class="gf-tab">Jawaban <span id="tabABadge" class="gf-count" hidden></span></button>
+        <button id="tabS" class="gf-tab">Setelan</button>
+      </nav>
+      <button id="btnPublishTop" class="gf-publish">Publikasikan</button>
+    </header>
 
-    <div class="card">
-      <h2>Pengaturan formulir</h2>
-      <label>Judul
-        <input id="fTitle">
-      </label>
-      <label>Deskripsi
-        <textarea id="fDesc" rows="2"></textarea>
-      </label>
-      <div class="row">
-        <label class="check"><input type="checkbox" id="fPublished"> Publikasikan (bisa diisi responden)</label>
-      </div>
-      <div class="linkrow">
-        <span class="muted">Link publik:</span>
-        <code id="fLink"></code>
-        <button id="btnCopy" class="btn small">Salin</button>
-        <a id="fOpen" class="btn small ghost" target="_blank" rel="noopener">Buka</a>
-      </div>
-      <button id="btnSaveMeta" class="btn">Simpan</button>
-    </div>
-
-    <div class="card">
-      <h2>Opsi pengumpulan</h2>
-      <div class="checks">
-        <label class="check"><input type="checkbox" id="sAccept"> Terima respons</label>
-        <label class="check"><input type="checkbox" id="sQuiz"> Mode kuis (ada kunci & nilai)</label>
-        <label class="check"><input type="checkbox" id="sShowScore"> Tampilkan nilai setelah submit</label>
-        <label class="check"><input type="checkbox" id="sName"> Wajib isi nama</label>
-        <label class="check"><input type="checkbox" id="sShQ"> Acak urutan soal</label>
-        <label class="check"><input type="checkbox" id="sShO"> Acak urutan opsi</label>
-      </div>
-      <div class="row">
-        <label>Batas waktu (opsional)
-          <input type="datetime-local" id="sDeadline">
-        </label>
-        <label>Maks. respons (opsional)
-          <input type="number" id="sMaxResp" min="1" placeholder="tanpa batas">
-        </label>
-      </div>
-      <button id="btnSaveSettings" class="btn">Simpan opsi</button>
-    </div>
-
-    <div class="card">
-      <h2>Soal (<span id="qCount">0</span>)</h2>
-      <div id="qList"></div>
-    </div>
-
-    <div class="card">
-      <h2 id="qFormTitle">＋ Tambah soal</h2>
-      <label>Tipe soal
-        <select id="qType"></select>
-      </label>
-      <label>Pertanyaan
-        <textarea id="qPrompt" rows="2" placeholder="Tulis pertanyaan di sini…"></textarea>
-      </label>
-      <div id="qOptions"></div>
-      <div id="qScale" hidden>
-        <div class="row">
-          <label>Nilai min<input type="number" id="sMin" value="1"></label>
-          <label>Nilai maks<input type="number" id="sMax" value="5"></label>
+    <div class="wrap narrow gf-editor">
+      <div id="paneQ">
+        <div class="gf-card gf-title-card">
+          <input id="fTitle" class="gf-bigtitle" placeholder="Formulir tanpa judul" autocomplete="off">
+          <textarea id="fDesc" class="gf-desc" rows="1" placeholder="Deskripsi formulir"></textarea>
+          <div class="linkrow">
+            <code id="fLink"></code>
+            <button id="btnCopy" class="btn small">Salin</button>
+            <a id="fOpen" class="btn small ghost" target="_blank" rel="noopener">Buka</a>
+          </div>
+          <div class="row">
+            <button id="btnSaveMeta" class="btn small">Simpan judul & deskripsi</button>
+            <span class="muted small" id="pubState"></span>
+          </div>
         </div>
-        <div class="row">
-          <label>Label min<input id="sMinLabel" placeholder="cth: Sangat tidak setuju"></label>
-          <label>Label maks<input id="sMaxLabel" placeholder="cth: Sangat setuju"></label>
+
+        <div id="qList"></div>
+
+        <div class="gf-card gf-qcard" id="qEditorCard">
+          <div class="gf-qcard-head">
+            <input id="qPrompt" class="gf-qtitle" placeholder="Pertanyaan Tanpa Judul" autocomplete="off">
+            <select id="qType" class="gf-qtype"></select>
+          </div>
+          <div id="qOptions" class="gf-opts"></div>
+          <div id="qScale" hidden>
+            <div class="row">
+              <label>Nilai min<input type="number" id="sMin" value="1" class="gf-num"></label>
+              <label>Nilai maks<input type="number" id="sMax" value="5" class="gf-num"></label>
+            </div>
+            <div class="row">
+              <label>Label min<input id="sMinLabel" class="gf-textlike" placeholder="cth: Sangat tidak setuju"></label>
+              <label>Label maks<input id="sMaxLabel" class="gf-textlike" placeholder="cth: Sangat setuju"></label>
+            </div>
+          </div>
+          <div class="row" id="qPointsRow">
+            <label>Poin (kuis)<input type="number" id="qPoints" value="0" min="0" max="1000" class="gf-num"></label>
+          </div>
+          <div id="qCorrectWrap" hidden>
+            <div class="gf-keyhead">Kunci jawaban</div>
+            <div id="qCorrect"></div>
+          </div>
+          <div class="gf-qcard-foot">
+            <button id="btnDupQ" class="iconbtn" title="Duplikat soal ini" hidden>⧉</button>
+            <button id="btnDelQ" class="iconbtn" title="Hapus soal ini" hidden>🗑</button>
+            <span class="spacer"></span>
+            <span class="req-label">Wajib diisi</span>
+            <label class="switch"><input type="checkbox" id="qRequired"><span class="slider"></span></label>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button id="btnSaveQ" class="btn">Simpan soal</button>
+            <button id="btnCancelQ" class="btn ghost" hidden>Batal</button>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <label class="check"><input type="checkbox" id="qRequired"> Wajib diisi</label>
-        <label>Poin (kuis)<input type="number" id="qPoints" value="0" min="0" max="1000"></label>
+
+      <div id="paneS" hidden>
+        <div class="gf-card">
+          <h3 class="rv-title">Setelan</h3>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="sAccept"> Terima respons</label>
+            <label class="check"><input type="checkbox" id="sQuiz"> Mode kuis (ada kunci & nilai)</label>
+            <label class="check"><input type="checkbox" id="sShowScore"> Tampilkan nilai setelah submit</label>
+            <label class="check"><input type="checkbox" id="sName"> Wajib isi nama</label>
+            <label class="check"><input type="checkbox" id="sShQ"> Acak urutan soal</label>
+            <label class="check"><input type="checkbox" id="sShO"> Acak urutan opsi</label>
+          </div>
+          <div class="row">
+            <label>Batas waktu (opsional)
+              <input type="datetime-local" id="sDeadline">
+            </label>
+            <label>Maks. respons (opsional)
+              <input type="number" id="sMaxResp" min="1" placeholder="tanpa batas">
+            </label>
+          </div>
+          <button id="btnSaveSettings" class="btn">Simpan setelan</button>
+        </div>
       </div>
-      <div id="qCorrectWrap" hidden>
-        <h3>Kunci jawaban</h3>
-        <div id="qCorrect"></div>
-      </div>
-      <div class="row">
-        <button id="btnSaveQ" class="btn">Simpan soal</button>
-        <button id="btnCancelQ" class="btn ghost" hidden>Batal</button>
-      </div>
+    </div>
+
+    <div class="gf-toolbar">
+      <button id="tbAdd" title="Tambah pertanyaan">＋</button>
+      <button id="tbPreview" title="Pratinjau formulir">👁</button>
     </div>
   </section>
 
