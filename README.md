@@ -56,7 +56,9 @@ deploy/
 | POST | /api/forms/:id/questions/reorder | sesi | susun ulang soal `{order: [id...]}` |
 | GET | /f/:slug | — | halaman responden publik |
 | GET | /api/public/forms/:slug | — | skema soal publik (tanpa kunci jawaban; hormati acak/publish/deadline/batas) |
-| POST | /api/public/forms/:slug/submit | — | kirim jawaban `{respondent_name?, respondent_class?, answers}` → validasi server-side, cegah ganda, skor otomatis bila kuis (rate-limit 20x/IP/10 mnt) |
+| POST | /api/public/forms/:slug/submit | — | kirim jawaban `{answers}` → validasi server-side, kunci identitas 409 bila ganda, skor otomatis bila kuis (rate-limit 20x/IP/10 mnt) |
+| GET | /api/public/forms/:slug/mine?identity= | — | ambil jawaban sendiri untuk diubah (bila allow_edit) |
+| PUT | /api/public/forms/:slug/submit | — | perbarui jawaban `{identity, answers}` (bila allow_edit; nonaktif untuk kuis) |
 | GET | /api/forms/:id/responses | sesi | daftar respons (paginasi `?page&limit`) |
 | GET | /api/forms/:id/responses/:rid | sesi | detail satu respons + jawabannya |
 | DELETE | /api/forms/:id/responses/:rid | sesi | hapus satu respons |
@@ -64,6 +66,17 @@ deploy/
 | GET | /api/forms/:id/export.csv | sesi | unduh CSV (BOM, escaping benar) |
 | GET | /api/forms/:id/export/word | sesi | unduh Word (.doc tabel) |
 | PATCH | /api/forms/:id/responses/:rid/score | sesi | koreksi skor manual (0–total poin) |
+| GET | /api/users | admin | daftar pengguna |
+| POST | /api/users | admin | buat akun `{username, password, role?}` |
+| PATCH | /api/users/:id | admin | reset password pengguna (sesi lama hangus) |
+| DELETE | /api/users/:id | admin | hapus pengguna + semua formulirnya |
+| PATCH | /api/users/me/password | sesi | ganti password sendiri |
+
+## Multi-user
+
+Satu akun **admin** (dibuat saat pertama jalan) + akun **guru** yang dibuatkan admin lewat tombol
+**Pengguna**. Guru hanya melihat & mengelola formulir miliknya sendiri; admin melihat semua
+(ada badge 👤 nama pemilik). Menghapus akun guru ikut menghapus semua formulir miliknya.
 
 ## Tahapan
 

@@ -14,7 +14,7 @@ const QTYPES = [
 const QLABEL = Object.fromEntries(QTYPES);
 const CHOICE_TYPES = ["multiple_choice", "checkboxes", "dropdown"];
 
-const state = { form: null, questions: [], editingQ: null };
+const state = { form: null, questions: [], editingQ: null, me: null };
 
 async function api(path, method = "GET", body) {
   const r = await fetch(path, {
@@ -38,9 +38,22 @@ function toast(msg, isErr = false) {
 }
 
 function show(view) {
-  for (const v of ["loginCard", "dashView", "editorView", "resultsView"]) $(v).hidden = v !== view;
-  $("btnLogout").hidden = view === "loginCard";
+  for (const v of ["loginCard", "dashView", "editorView", "resultsView", "usersView"]) $(v).hidden = v !== view;
+  const logged = view !== "loginCard";
+  $("btnLogout").hidden = !logged;
+  $("meInfo").hidden = !logged;
+  $("btnUsers").hidden = !logged || !state.me || state.me.role !== "admin";
   $("mainBrand").hidden = view === "editorView"; // editor punya topbar sendiri
+}
+
+async function loadMe() {
+  try {
+    const { user } = await api("/api/me");
+    state.me = user;
+  } catch { state.me = null; }
+  if (state.me) {
+    $("meInfo").textContent = `${state.me.username}${state.me.role === "admin" ? " (admin)" : ""}`;
+  }
 }
 
 function showPane(p) {
@@ -70,9 +83,11 @@ function updateAnswerBadge() {
 async function refresh() {
   const r = await fetch("/api/me");
   if (r.ok) {
+    await loadMe();
     show("dashView");
     loadDashboard();
   } else {
+    state.me = null;
     show("loginCard");
   }
 }
@@ -82,6 +97,7 @@ async function doLogin() {
   try {
     await api("/api/login", "POST", { username: $("username").value, password: $("password").value });
     $("password").value = "";
+    await loadMe();
     show("dashView");
     loadDashboard();
   } catch (e) {
@@ -111,6 +127,7 @@ async function loadDashboard() {
             <span class="badge ${f.is_published ? "on" : ""}">${f.is_published ? "🟢 Publik" : "⚪ Draf"}</span>
             <span class="badge">${f.question_count} soal</span>
             <span class="badge">${f.response_count} respons</span>
+            ${state.me && state.me.role === "admin" && f.owner_name ? `<span class="badge" title="Pemilik formulir">👤 ${esc(f.owner_name)}</span>` : ""}
           </div>
           <div class="linkrow"><code>${esc(location.origin + "/f/" + f.slug)}</code></div>
         </div>
@@ -153,6 +170,74 @@ async function deleteForm(id, title) {
     await api(`/api/forms/${id}`, "DELETE");
     toast("Formulir dihapus");
     loadDashboard();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+/* ---------- pengguna (khusus admin) ---------- */
+
+async function loadUsers() {
+  try {
+    const { users } = await api("/api/users");
+    const box = $("userList");
+    box.innerHTML = users.length
+      ? `<table class="rtable"><thead><tr><th>Username</th><th>Peran</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody>` +
+        users.map((u) => `<tr>
+          <td><strong>${esc(u.username)}</strong>${state.me && u.id === state.me.id ? ` <span class="badge">saya</span>` : ""}</td>
+          <td>${u.role === "admin" ? "Admin" : "Guru"}</td>
+          <td class="small">${esc(u.created_at || "—")}</td>
+          <td class="nowrap">
+            <button class="btn small ghost" data-ur="reset" data-uid="${u.id}" data-un="${esc(u.username)}">Reset password</button>
+            <button class="btn small ghost" data-ur="del" data-uid="${u.id}" data-un="${esc(u.username)}">Hapus</button>
+          </td>
+        </tr>`).join("") + `</tbody></table>`
+      : `<p class="muted">Belum ada pengguna.</p>`;
+    box.querySelectorAll("[data-ur]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const id = Number(b.dataset.uid), un = b.dataset.un;
+        if (b.dataset.ur === "reset") resetUserPw(id, un);
+        else delUser(id, un);
+      })
+    );
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function createUser() {
+  const username = $("nuName").value.trim();
+  const password = $("nuPass").value;
+  const role = $("nuRole").value;
+  if (!username || !password) { toast("Username & password wajib diisi", true); return; }
+  try {
+    await api("/api/users", "POST", { username, password, role });
+    $("nuName").value = ""; $("nuPass").value = "";
+    toast(`Akun ${username} dibuat`);
+    loadUsers();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function resetUserPw(id, username) {
+  const pw = prompt(`Password baru untuk "${username}" (min. 6 karakter):`);
+  if (pw === null) return;
+  if (pw.length < 6) { toast("Password min. 6 karakter", true); return; }
+  try {
+    await api(`/api/users/${id}`, "PATCH", { password: pw });
+    toast(`Password ${username} direset`);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function delUser(id, username) {
+  if (!confirm(`Hapus akun "${username}"? Semua formulir miliknya ikut terhapus!`)) return;
+  try {
+    await api(`/api/users/${id}`, "DELETE");
+    toast(`Akun ${username} dihapus`);
+    loadUsers();
   } catch (e) {
     toast(e.message, true);
   }
@@ -539,6 +624,9 @@ $("btnLogout").addEventListener("click", async () => {
   await api("/api/logout", "POST").catch(() => {});
   refresh();
 });
+$("btnUsers").addEventListener("click", () => { show("usersView"); loadUsers(); });
+$("btnBackDash").addEventListener("click", () => { show("dashView"); loadDashboard(); });
+$("btnCreateUser").addEventListener("click", createUser);
 $("btnBack").addEventListener("click", () => { show("dashView"); loadDashboard(); });
 
 $("btnCreate").addEventListener("click", async () => {

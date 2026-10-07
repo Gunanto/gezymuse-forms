@@ -85,12 +85,19 @@ export const requireAuth = createMiddleware(async (c, next) => {
   if (!token) return c.json({ error: "Belum login" }, 401);
   const row = getDb()
     .query(
-      `SELECT u.id, u.username FROM sessions s
+      `SELECT u.id, u.username, u.role FROM sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.id = ? AND s.expires_at > datetime('now')`
     )
-    .get(token) as { id: number; username: string } | null;
+    .get(token) as { id: number; username: string; role: string } | null;
   if (!row) return c.json({ error: "Sesi tidak valid / kedaluwarsa" }, 401);
-  c.set("user", { id: row.id, username: row.username });
+  c.set("user", { id: row.id, username: row.username, role: row.role || "guru" });
+  await next();
+});
+
+// Setelah requireAuth: hanya peran admin.
+export const requireAdmin = createMiddleware(async (c, next) => {
+  const u = c.get("user") as { role?: string } | undefined;
+  if (!u || u.role !== "admin") return c.json({ error: "Hanya admin yang boleh mengakses" }, 403);
   await next();
 });

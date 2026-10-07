@@ -15,6 +15,7 @@ const MIGRATIONS: string[] = [
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      username TEXT UNIQUE NOT NULL,
      password_hash TEXT NOT NULL,
+     role TEXT NOT NULL DEFAULT 'guru',
      created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS sessions (
      id TEXT PRIMARY KEY,
@@ -27,6 +28,7 @@ const MIGRATIONS: string[] = [
      slug TEXT UNIQUE NOT NULL,
      title TEXT NOT NULL,
      description TEXT NOT NULL DEFAULT '',
+     owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
      settings TEXT NOT NULL DEFAULT '{}',
      is_published INTEGER NOT NULL DEFAULT 0,
      created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -89,6 +91,15 @@ export function initDb(dataDir: string): Database {
     db.exec("ALTER TABLE responses ADD COLUMN updated_at TEXT");
   if (hasTable("responses"))
     db.exec("CREATE INDEX IF NOT EXISTS idx_responses_identity ON responses(form_id, identity_key)");
+  // 2026-10-07: multi-user — peran admin/guru + kepemilikan formulir.
+  if (hasTable("users") && !hasCol("users", "role")) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'guru'");
+    db.exec("UPDATE users SET role = 'admin' WHERE username = 'admin'");
+  }
+  if (hasTable("forms") && !hasCol("forms", "owner_id")) {
+    db.exec("ALTER TABLE forms ADD COLUMN owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+    db.exec("UPDATE forms SET owner_id = (SELECT id FROM users WHERE username = 'admin' LIMIT 1) WHERE owner_id IS NULL");
+  }
   for (let i = 0; i < MIGRATIONS.length; i++) {
     const v = i + 1;
     const done = db.query("SELECT 1 FROM schema_migrations WHERE version = ?").get(v);
@@ -129,6 +140,6 @@ export async function ensureAdmin(): Promise<{ username: string; generatedPasswo
     generated = password;
   }
   const hash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 10 });
-  db.query("INSERT INTO users (username, password_hash) VALUES ('admin', ?)").run(hash);
+  db.query("INSERT INTO users (username, password_hash, role) VALUES ('admin', ?, 'admin')").run(hash);
   return { username: "admin", generatedPassword: generated };
 }

@@ -13,6 +13,8 @@
     <span class="logo">📝</span>
     <div><h1>GezyForm</h1><p>Admin formulir</p></div>
     <div class="spacer"></div>
+    <span id="meInfo" class="muted small" hidden></span>
+    <button id="btnUsers" class="btn ghost small" hidden>Pengguna</button>
     <button id="btnLogout" class="btn ghost small" hidden>Keluar</button>
   </header>
 
@@ -42,6 +44,31 @@
       <button id="btnCreate" class="btn">Buat formulir</button>
     </div>
     <div id="formList"></div>
+  </section>
+
+  <section id="usersView" hidden>
+    <div class="card">
+      <h2>＋ Akun guru baru</h2>
+      <div class="row">
+        <label>Username<input id="nuName" class="gf-textlike" placeholder="cth: bu.ani" autocomplete="off"></label>
+        <label>Password awal<input id="nuPass" type="text" class="gf-textlike" placeholder="min. 6 karakter" autocomplete="new-password"></label>
+        <label>Peran
+          <select id="nuRole" class="gf-textlike">
+            <option value="guru">Guru</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="btnCreateUser" class="btn">Buat akun</button>
+        <button id="btnBackDash" class="btn ghost">← Kembali</button>
+      </div>
+      <p class="muted small">Guru hanya bisa melihat & mengelola formulir miliknya sendiri. Menghapus akun ikut menghapus semua formulir miliknya.</p>
+    </div>
+    <div class="card">
+      <h3 class="rv-title">Daftar pengguna</h3>
+      <div id="userList"></div>
+    </div>
   </section>
 
   <section id="editorView" hidden>

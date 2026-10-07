@@ -17,8 +17,11 @@ function escHtml(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
 
-function getForm(db: ReturnType<typeof getDb>, id: string) {
-  return db.query("SELECT * FROM forms WHERE id = ?").get(id) as any;
+function getForm(db: ReturnType<typeof getDb>, id: string, user: { id: number; role: string }) {
+  const f = db.query("SELECT * FROM forms WHERE id = ?").get(id) as any;
+  if (!f) return null;
+  if (user.role !== "admin" && f.owner_id !== user.id) return null;
+  return f;
 }
 function notFound(c: any) {
   return c.json({ error: "Formulir tidak ditemukan" }, 404);
@@ -38,7 +41,7 @@ function fmtValue(v: unknown): string {
 
 results.get("/forms/:id/responses", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const page = Math.max(1, Number(c.req.query("page")) || 1);
   const limit = Math.min(100, Math.max(1, Number(c.req.query("limit")) || 20));
@@ -53,7 +56,7 @@ results.get("/forms/:id/responses", (c) => {
 
 results.get("/forms/:id/responses/:rid", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const r = db
     .query("SELECT id, score, submitted_at, updated_at FROM responses WHERE id = ? AND form_id = ?")
@@ -74,7 +77,7 @@ results.get("/forms/:id/responses/:rid", (c) => {
 
 results.delete("/forms/:id/responses/:rid", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const info = db.query("DELETE FROM responses WHERE id = ? AND form_id = ?").run(c.req.param("rid"), form.id);
   if (!info.changes) return c.json({ error: "Respons tidak ditemukan" }, 404);
@@ -84,7 +87,7 @@ results.delete("/forms/:id/responses/:rid", (c) => {
 // Koreksi skor manual oleh admin (mis. setelah menilai soal teks).
 results.patch("/forms/:id/responses/:rid/score", async (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   let body: any;
   try {
@@ -167,7 +170,7 @@ function summarizeQuestion(db: ReturnType<typeof getDb>, q: any, isQuiz: boolean
 
 results.get("/forms/:id/summary", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const settings = JSON.parse(form.settings || "{}");
   const questions = orderedQuestions(db, form.id);
@@ -228,7 +231,7 @@ function exportMatrix(db: ReturnType<typeof getDb>, form: any) {
 
 results.get("/forms/:id/export.csv", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const { head, body } = exportMatrix(db, form);
   const csv = String.fromCharCode(0xfeff) + [head, ...body].map((row) => (row as unknown[]).map(escCsv).join(",")).join("\r\n");
@@ -242,7 +245,7 @@ results.get("/forms/:id/export.csv", (c) => {
 
 results.get("/forms/:id/export/word", (c) => {
   const db = getDb();
-  const form = getForm(db, c.req.param("id"));
+  const form = getForm(db, c.req.param("id"), c.get("user"));
   if (!form) return notFound(c);
   const { head, body, total } = exportMatrix(db, form);
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
