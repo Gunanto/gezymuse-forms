@@ -57,6 +57,7 @@ function questionOut(r: any) {
     points: r.points,
     correct_answer: r.correct_answer ? JSON.parse(r.correct_answer) : null,
     is_identity: !!r.is_identity,
+    validation: r.validation || "",
     order_index: r.order_index,
   };
 }
@@ -193,10 +194,10 @@ admin.post("/forms/:id/duplicate", (c) => {
       .run(slug, `${form.title} (salinan)`, form.description, form.settings, u.id);
     const newId = Number(info.lastInsertRowid);
     const ins = db.query(
-      "INSERT INTO questions (form_id, qtype, prompt, options, required, points, correct_answer, is_identity, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO questions (form_id, qtype, prompt, options, required, points, correct_answer, is_identity, validation, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     for (const q of questions) {
-      ins.run(newId, q.qtype, q.prompt, q.options, q.required, q.points, q.correct_answer, q.is_identity, q.order_index);
+      ins.run(newId, q.qtype, q.prompt, q.options, q.required, q.points, q.correct_answer, q.is_identity, q.validation, q.order_index);
     }
     return newId;
   });
@@ -223,9 +224,9 @@ admin.post("/forms/:id/questions", async (c) => {
   const q = vv.value;
   const info = db
     .query(
-      "INSERT INTO questions (form_id, qtype, prompt, options, required, points, correct_answer, is_identity, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO questions (form_id, qtype, prompt, options, required, points, correct_answer, is_identity, validation, order_index) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
-    .run(form.id, q.qtype, q.prompt, q.options, q.required ? 1 : 0, q.points, q.correct_answer, q.is_identity ? 1 : 0, q.order_index);
+    .run(form.id, q.qtype, q.prompt, q.options, q.required ? 1 : 0, q.points, q.correct_answer, q.is_identity ? 1 : 0, q.validation, q.order_index);
   if (q.is_identity)
     db.query("UPDATE questions SET is_identity = 0 WHERE form_id = ? AND id != ?").run(form.id, Number(info.lastInsertRowid));
   db.query("UPDATE forms SET updated_at = datetime('now') WHERE id = ?").run(form.id);
@@ -250,14 +251,15 @@ admin.patch("/questions/:qid", async (c) => {
     points: body.points ?? existing.points,
     correct_answer: body.correct_answer !== undefined ? body.correct_answer : existing.correct_answer ? JSON.parse(existing.correct_answer) : null,
     is_identity: body.is_identity ?? !!existing.is_identity,
+    validation: body.validation ?? existing.validation ?? "",
     order_index: body.order_index ?? existing.order_index,
   };
   const v = validateQuestion(merged);
   if (!v.ok) return c.json({ error: v.error }, 400);
   const q = v.value;
   db.query(
-    "UPDATE questions SET qtype = ?, prompt = ?, options = ?, required = ?, points = ?, correct_answer = ?, is_identity = ?, order_index = ? WHERE id = ?"
-  ).run(q.qtype, q.prompt, q.options, q.required ? 1 : 0, q.points, q.correct_answer, q.is_identity ? 1 : 0, q.order_index, existing.id);
+    "UPDATE questions SET qtype = ?, prompt = ?, options = ?, required = ?, points = ?, correct_answer = ?, is_identity = ?, validation = ?, order_index = ? WHERE id = ?"
+  ).run(q.qtype, q.prompt, q.options, q.required ? 1 : 0, q.points, q.correct_answer, q.is_identity ? 1 : 0, q.validation, q.order_index, existing.id);
   if (q.is_identity)
     db.query("UPDATE questions SET is_identity = 0 WHERE form_id = ? AND id != ?").run(existing.form_id, existing.id);
   db.query("UPDATE forms SET updated_at = datetime('now') WHERE id = ?").run(existing.form_id);

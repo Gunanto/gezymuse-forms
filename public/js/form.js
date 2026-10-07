@@ -19,8 +19,10 @@ function inputFor(q, showPoints) {
   const pts = showPoints && q.points > 0 ? ` <span class="pts">${q.points} poin</span>` : "";
   const head = `<div class="qprompt">${esc(q.prompt)}${req}${pts}</div>`;
   const name = `q_${q.id}`;
-  if (q.qtype === "short_text")
-    return `${head}<input class="gf-text" data-q="${q.id}" data-t="text" placeholder="Jawaban Anda">`;
+  if (q.qtype === "short_text") {
+    const emailAttrs = q.validation === "email" ? ` type="email" inputmode="email"` : "";
+    return `${head}<input class="gf-text" data-q="${q.id}" data-t="text"${emailAttrs} placeholder="Jawaban Anda">`;
+  }
   if (q.qtype === "paragraph")
     return `${head}<textarea class="gf-text" data-q="${q.id}" data-t="text" rows="2" placeholder="Jawaban Anda"></textarea>`;
   if (q.qtype === "multiple_choice")
@@ -63,9 +65,12 @@ function render() {
   $("formView").hidden = false;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function collect() {
   const answers = {};
   let firstInvalid = null;
+  let badEmail = false;
   for (const q of schema.questions) {
     const card = document.querySelector(`[data-card="${q.id}"]`);
     let val;
@@ -86,9 +91,15 @@ function collect() {
       if (!firstInvalid) firstInvalid = card;
       continue;
     }
+    if (!empty && q.validation === "email" && !EMAIL_RE.test(val)) {
+      card.classList.add("invalid");
+      if (!firstInvalid) firstInvalid = card;
+      badEmail = true;
+      continue;
+    }
     if (!empty) answers[q.id] = val;
   }
-  return { answers, firstInvalid };
+  return { answers, firstInvalid, badEmail };
 }
 
 function identityValue() {
@@ -102,10 +113,12 @@ function identityValue() {
 async function submit() {
   const errBox = $("serverErr");
   errBox.hidden = true;
-  const { answers, firstInvalid } = collect();
+  const { answers, firstInvalid, badEmail } = collect();
   if (firstInvalid) {
     firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-    errBox.textContent = "Masih ada pertanyaan wajib yang belum dijawab (ditandai merah).";
+    errBox.textContent = badEmail
+      ? "Ada alamat email yang formatnya salah (ditandai merah). Contoh: nama@sekolah.id"
+      : "Masih ada pertanyaan wajib yang belum dijawab (ditandai merah).";
     errBox.hidden = false;
     return;
   }

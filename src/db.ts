@@ -43,6 +43,7 @@ const MIGRATIONS: string[] = [
      points REAL NOT NULL DEFAULT 0,
      correct_answer TEXT,
      is_identity INTEGER NOT NULL DEFAULT 0,
+     validation TEXT NOT NULL DEFAULT '',
      order_index INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS idx_questions_form ON questions(form_id, order_index)`,
   `CREATE TABLE IF NOT EXISTS responses (
@@ -85,6 +86,8 @@ export function initDb(dataDir: string): Database {
   // 2026-10-07: kunci identitas (satu pengisian per jawaban) + edit jawaban.
   if (hasTable("questions") && !hasCol("questions", "is_identity"))
     db.exec("ALTER TABLE questions ADD COLUMN is_identity INTEGER NOT NULL DEFAULT 0");
+  if (hasTable("questions") && !hasCol("questions", "validation"))
+    db.exec("ALTER TABLE questions ADD COLUMN validation TEXT NOT NULL DEFAULT ''");
   if (hasTable("responses") && !hasCol("responses", "identity_key"))
     db.exec("ALTER TABLE responses ADD COLUMN identity_key TEXT");
   if (hasTable("responses") && !hasCol("responses", "updated_at"))

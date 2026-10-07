@@ -314,6 +314,7 @@ function renderQuestions() {
           <span class="badge">${QLABEL[q.qtype] || q.qtype}</span>
           ${q.required ? `<span class="badge req">wajib</span>` : ""}
           ${q.is_identity ? `<span class="badge" title="Kunci identitas">🔑 identitas</span>` : ""}
+          ${q.validation === "email" ? `<span class="badge" title="Validasi format email">✉️ email</span>` : ""}
           ${state.form.settings.is_quiz ? `<span class="badge">${q.points} poin</span>` : ""}
         </div>
         <div class="muted small">${esc(qPreview(q))}</div>
@@ -384,6 +385,7 @@ function renderQFields() {
   const t = $("qType").value;
   const isChoice = CHOICE_TYPES.includes(t);
   $("qIdentityRow").hidden = t !== "short_text";
+  $("qValidationWrap").hidden = t !== "short_text";
   $("qOptions").innerHTML = "";
   $("qOptions").dataset.t = t;
   $("qScale").hidden = t !== "linear_scale";
@@ -480,6 +482,7 @@ function collectQuestion() {
     options,
     required: $("qRequired").checked,
     is_identity: $("qType").value === "short_text" && $("qIdentity").checked,
+    validation: $("qType").value === "short_text" ? $("qValidation").value : "",
     points: Number($("qPoints").value) || 0,
     correct_answer: collectCorrect(),
   };
@@ -495,6 +498,7 @@ function resetQForm() {
   $("qPrompt").value = "";
   $("qRequired").checked = false;
   $("qIdentity").checked = false;
+  $("qValidation").value = "";
   $("qPoints").value = 0;
   $("sMin").value = 1; $("sMax").value = 5;
   $("sMinLabel").value = ""; $("sMaxLabel").value = "";
@@ -513,6 +517,7 @@ function startEdit(id) {
   $("qPrompt").value = q.prompt;
   $("qRequired").checked = q.required;
   $("qIdentity").checked = !!q.is_identity;
+  $("qValidation").value = q.validation || "";
   $("qPoints").value = q.points;
   renderQFields();
   if (CHOICE_TYPES.includes(q.qtype)) {

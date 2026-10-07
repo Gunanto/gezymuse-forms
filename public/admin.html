@@ -120,6 +120,12 @@
           </div>
           <div class="row" id="qPointsRow">
             <label>Poin (kuis)<input type="number" id="qPoints" value="0" min="0" max="1000" class="gf-num"></label>
+            <label id="qValidationWrap" hidden>Validasi
+              <select id="qValidation" class="gf-textlike">
+                <option value="">Tanpa validasi</option>
+                <option value="email">Email</option>
+              </select>
+            </label>
           </div>
           <div id="qCorrectWrap" hidden>
             <div class="gf-keyhead">Kunci jawaban</div>

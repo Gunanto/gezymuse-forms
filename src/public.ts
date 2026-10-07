@@ -62,8 +62,15 @@ function publicQuestion(q: any) {
     prompt: q.prompt,
     options: JSON.parse(q.options || "[]"),
     required: !!q.required,
+    validation: q.validation || "",
     points: q.points,
   };
+}
+
+// Aturan umum penulisan email: ada @, tanpa spasi, ada titik di domain.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export function isValidEmail(v: string): boolean {
+  return EMAIL_RE.test(v);
 }
 
 pub.get("/forms/:slug", (c) => {
@@ -113,6 +120,8 @@ function validateAnswer(q: any, raw: unknown): { value?: unknown; error?: string
   if (t === "short_text" || t === "paragraph") {
     if (typeof raw !== "string") return { error: "jawaban harus teks" };
     const v = raw.trim().slice(0, 2000);
+    if (q.validation === "email" && v && !isValidEmail(v))
+      return { error: "harus format email yang valid (contoh: nama@sekolah.id)" };
     return { value: v };
   }
   if (t === "multiple_choice" || t === "dropdown") {
