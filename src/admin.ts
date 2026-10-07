@@ -4,8 +4,12 @@ import { requireAuth } from "./auth";
 import { validateQuestion, validateSettings, validateFormMeta } from "./validate";
 
 // Semua route di sini butuh login admin. Dipasang di /api oleh app.ts.
+// PENTING: jangan pakai use("*") — setelah di-mount, "*" akan ikut
+// mencakup /api/public/* (route publik tanpa login).
 const admin = new Hono();
-admin.use("*", requireAuth);
+admin.use("/forms", requireAuth);
+admin.use("/forms/*", requireAuth);
+admin.use("/questions/*", requireAuth);
 
 function formOut(r: any) {
   return {

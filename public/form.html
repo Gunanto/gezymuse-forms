@@ -3,24 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GezyForm — Isi Formulir</title>
+<title>GezyForm</title>
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/form.css">
 </head>
-<body>
-<div class="wrap">
-  <header class="brand">
-    <span class="logo">📝</span>
-    <div><h1>GezyForm</h1><p id="slugLine">Memuat formulir…</p></div>
-  </header>
-  <section class="card">
-    <p>Halaman responden (<code id="slugCode"></code>) akan tampil penuh di <b>Tahap 3</b>:
-    render soal dari server, validasi, lalu submit.</p>
-  </section>
+<body class="gf">
+<div class="wrap narrow">
+  <div id="loading" class="gf-card gf-loading">Memuat formulir…</div>
+
+  <div id="errorView" hidden>
+    <div class="gf-card gf-title-card">
+      <h1>Formulir tidak tersedia</h1>
+      <p id="errorMsg"></p>
+    </div>
+  </div>
+
+  <div id="formView" hidden>
+    <div class="gf-card gf-title-card">
+      <h1 id="fTitle"></h1>
+      <p id="fDesc"></p>
+    </div>
+    <div id="serverErr" class="gf-err" hidden></div>
+    <div id="identityCard" class="gf-card gf-q" hidden>
+      <div class="qprompt">Nama<span class="req">*</span></div>
+      <input id="rName" class="gf-text" placeholder="Nama lengkap" autocomplete="name">
+      <div class="qprompt" style="margin-top:16px">Kelas</div>
+      <input id="rClass" class="gf-text" placeholder="cth: 7A">
+    </div>
+    <div id="qList"></div>
+    <button id="btnSubmit" class="gf-submit">Kirim</button>
+    <p class="gf-foot">GezyForm — formulir milik sekolah, data tersimpan di server sekolah</p>
+  </div>
+
+  <div id="doneView" hidden>
+    <div class="gf-card gf-title-card gf-done">
+      <h1>Jawaban terkirim ✓</h1>
+      <p>Terima kasih sudah mengisi formulir ini.</p>
+      <div id="scoreBox" hidden><span class="gf-score" id="scoreText"></span></div>
+    </div>
+  </div>
 </div>
-<script>
-const slug = location.pathname.split("/").filter(Boolean).pop() || "";
-document.getElementById("slugCode").textContent = "/f/" + slug;
-document.getElementById("slugLine").textContent = "Formulir: " + slug;
-</script>
+<script src="/js/form.js"></script>
 </body>
 </html>

@@ -55,12 +55,14 @@ deploy/
 | DELETE | /api/questions/:qid | sesi | hapus soal |
 | POST | /api/forms/:id/questions/reorder | sesi | susun ulang soal `{order: [id...]}` |
 | GET | /f/:slug | — | halaman responden publik |
+| GET | /api/public/forms/:slug | — | skema soal publik (tanpa kunci jawaban; hormati acak/publish/deadline/batas) |
+| POST | /api/public/forms/:slug/submit | — | kirim jawaban `{respondent_name?, respondent_class?, answers}` → validasi server-side, cegah ganda, skor otomatis bila kuis (rate-limit 20x/IP/10 mnt) |
 
 ## Tahapan
 
 1. ✅ Fondasi: server + DB + auth + health + file deploy
 2. ✅ Builder: CRUD form & soal (6 tipe MVP), admin UI
-3. Responden: render `/f/:slug`, validasi server-side, cegah ganda
+3. ✅ Responden: halaman /f/:slug ala Google Forms + submit tervalidasi
 4. Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
 5. Kuis: kunci jawaban, skor otomatis server-side
 6. Hardening: rate-limit submit, backup, uji penuh

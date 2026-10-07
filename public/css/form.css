@@ -1,0 +1,59 @@
+/* GezyForm — halaman responden, gaya Google Forms */
+.gf {
+  background: #f0ebf8;
+  font-family: "Google Sans", Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.gf .wrap.narrow { max-width: 640px; }
+.gf-card {
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 12px;
+  box-shadow: none;
+}
+.gf-title-card { border-top: 10px solid #673ab7; padding-top: 18px; }
+.gf-title-card h1 {
+  margin: 0 0 8px; font-size: 28px; font-weight: 500; color: #202124;
+}
+.gf-title-card p { margin: 0; color: #5f6368; font-size: 14px; white-space: pre-line; }
+.gf-q { padding: 20px 24px; }
+.gf-q .qprompt { font-size: 16px; color: #202124; margin-bottom: 14px; }
+.gf-q .qprompt .req { color: #d93025; margin-left: 4px; }
+.gf-text {
+  border: none; border-bottom: 1px solid #dadce0; border-radius: 0;
+  padding: 8px 2px; font-size: 15px; background: transparent;
+}
+.gf-text:focus { border-bottom: 2px solid #673ab7; outline: none; }
+textarea.gf-text { border-bottom: 1px solid #dadce0; resize: vertical; min-height: 60px; }
+.gf-opt { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 15px; color: #202124; cursor: pointer; }
+.gf-opt input { width: 18px; height: 18px; accent-color: #673ab7; margin: 0; cursor: pointer; flex: none; }
+.gf-select {
+  border: 1px solid #dadce0; border-radius: 4px; padding: 10px 12px;
+  font-size: 15px; color: #202124; background: #fff; max-width: 320px;
+}
+.gf-scale { display: flex; align-items: center; gap: 4px; justify-content: space-between; max-width: 420px; }
+.gf-scale .slabel { font-size: 13px; color: #5f6368; max-width: 110px; }
+.gf-scale .svals { display: flex; gap: 2px; }
+.gf-scale label { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; color: #5f6368; cursor: pointer; padding: 4px 8px; }
+.gf-scale input { width: 18px; height: 18px; accent-color: #673ab7; margin: 0; cursor: pointer; }
+.gf-submit {
+  background: #673ab7; color: #fff; border: none; border-radius: 4px;
+  padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer;
+  margin: 6px 0 18px;
+}
+.gf-submit:hover { background: #5a2fa0; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.gf-submit:disabled { opacity: .6; cursor: default; }
+.gf-foot { text-align: center; color: #5f6368; font-size: 12px; margin-top: 8px; }
+.gf-err {
+  border: 1px solid #f5c6c2; background: #fdecec; color: #b3261e;
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; font-size: 14px;
+}
+.gf-q.invalid { border-color: #d93025; }
+.gf-done { text-align: left; }
+.gf-done h1 { font-size: 24px; }
+.gf-score {
+  font-size: 20px; color: #673ab7; font-weight: 500; margin-top: 12px;
+  background: #f0ebf8; border-radius: 8px; padding: 14px 18px; display: inline-block;
+}
+.gf-loading { text-align: center; color: #5f6368; padding: 60px 20px; }

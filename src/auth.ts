@@ -12,7 +12,7 @@ const fails = new Map<string, { count: number; resetAt: number }>();
 const MAX_FAILS = 10;
 const WINDOW_MS = 10 * 60 * 1000;
 
-function clientIp(c: Context): string {
+export function clientIp(c: Context): string {
   return (
     c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
     c.req.header("x-real-ip") ||
