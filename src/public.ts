@@ -77,8 +77,9 @@ export function isValidEmail(v: string): boolean {
 const NAMA_RE = /^[\p{L} .',]+$/u;
 
 // Kapitalisasi nama secara cerdas: kata yang seluruhnya huruf kecil/kapital
-// dinormalkan (budi -> Budi, BUDI -> Budi); kata campuran (mis. "S.Pd.")
-// dibiarkan agar gelar & ejaan khusus tidak rusak.
+// dinormalkan dulu; huruf pertama tiap kata DAN huruf setelah titik/petik
+// dikapitalkan, sehingga gelar tidak rusak: "s.pd." -> "S.Pd.",
+// "SITI AMINAH, S.PD." -> "Siti Aminah, S.Pd.", "d'angelo" -> "D'Angelo".
 export function formatNama(v: string): string {
   return v
     .split(/\s+/)
@@ -86,8 +87,8 @@ export function formatNama(v: string): string {
     .map((w) => {
       const allUpper = w === w.toUpperCase() && w !== w.toLowerCase();
       const allLower = w === w.toLowerCase() && w !== w.toUpperCase();
-      if (allUpper || allLower) return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-      return w.charAt(0).toUpperCase() + w.slice(1);
+      const base = allUpper || allLower ? w.toLowerCase() : w;
+      return base.replace(/(^|[.'])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
     })
     .join(" ");
 }

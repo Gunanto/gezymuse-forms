@@ -118,10 +118,13 @@ describe("Validasi nama pada soal teks singkat", () => {
     expect(r.value).toBe("Budi Santoso");
   });
 
-  test("huruf besar semua dinormalkan; gelar campuran tidak rusak", async () => {
+  test("huruf besar semua dinormalkan; gelar tidak rusak", async () => {
     let r = await storedAnswer("10.8.1.2", "SITI AMINAH");
     expect(r.value).toBe("Siti Aminah");
     r = await storedAnswer("10.8.1.3", "Siti Aminah, S.Pd.");
+    expect(r.status).toBe(200);
+    expect(r.value).toBe("Siti Aminah, S.Pd.");
+    r = await storedAnswer("10.8.1.9", "SITI AMINAH, S.PD.");
     expect(r.status).toBe(200);
     expect(r.value).toBe("Siti Aminah, S.Pd.");
   });
@@ -140,6 +143,6 @@ describe("Validasi nama pada soal teks singkat", () => {
   test("petik satu & titik lolos", async () => {
     const r = await storedAnswer("10.8.1.8", "d'angelo pratama");
     expect(r.status).toBe(200);
-    expect(r.value).toBe("D'angelo Pratama");
+    expect(r.value).toBe("D'Angelo Pratama");
   });
 });
