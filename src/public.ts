@@ -73,6 +73,33 @@ export function isValidEmail(v: string): boolean {
   return EMAIL_RE.test(v);
 }
 
+// Karakter yang diizinkan untuk validasi nama: huruf, spasi, titik, koma, petik satu.
+const NAMA_RE = /^[\p{L} .',]+$/u;
+
+// Kapitalisasi nama secara cerdas: kata yang seluruhnya huruf kecil/kapital
+// dinormalkan (budi -> Budi, BUDI -> Budi); kata campuran (mis. "S.Pd.")
+// dibiarkan agar gelar & ejaan khusus tidak rusak.
+export function formatNama(v: string): string {
+  return v
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => {
+      const allUpper = w === w.toUpperCase() && w !== w.toLowerCase();
+      const allLower = w === w.toLowerCase() && w !== w.toUpperCase();
+      if (allUpper || allLower) return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
+
+export function checkNama(v: string): { ok: true; value: string } | { ok: false; error: string } {
+  const clean = v.trim().replace(/\s+/g, " ");
+  if (clean.length > 30) return { ok: false, error: "nama maks 30 karakter" };
+  if (!NAMA_RE.test(clean))
+    return { ok: false, error: "nama hanya boleh huruf, spasi, titik, koma, dan petik satu (')" };
+  return { ok: true, value: formatNama(clean) };
+}
+
 pub.get("/forms/:slug", (c) => {
   const db = getDb();
   if (hit(reads, clientIp(c), MAX_READS))
@@ -122,6 +149,11 @@ function validateAnswer(q: any, raw: unknown): { value?: unknown; error?: string
     const v = raw.trim().slice(0, 2000);
     if (q.validation === "email" && v && !isValidEmail(v))
       return { error: "harus format email yang valid (contoh: nama@sekolah.id)" };
+    if (q.validation === "nama" && v) {
+      const c = checkNama(v);
+      if (!c.ok) return { error: c.error };
+      return { value: c.value };
+    }
     return { value: v };
   }
   if (t === "multiple_choice" || t === "dropdown") {

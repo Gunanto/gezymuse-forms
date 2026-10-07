@@ -21,7 +21,8 @@ function inputFor(q, showPoints) {
   const name = `q_${q.id}`;
   if (q.qtype === "short_text") {
     const emailAttrs = q.validation === "email" ? ` type="email" inputmode="email"` : "";
-    return `${head}<input class="gf-text" data-q="${q.id}" data-t="text"${emailAttrs} placeholder="Jawaban Anda">`;
+    const namaAttrs = q.validation === "nama" ? ` maxlength="30"` : "";
+    return `${head}<input class="gf-text" data-q="${q.id}" data-t="text"${emailAttrs}${namaAttrs} placeholder="Jawaban Anda">`;
   }
   if (q.qtype === "paragraph")
     return `${head}<textarea class="gf-text" data-q="${q.id}" data-t="text" rows="2" placeholder="Jawaban Anda"></textarea>`;
@@ -66,11 +67,13 @@ function render() {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAMA_RE = /^[\p{L} .',]+$/u;
 
 function collect() {
   const answers = {};
   let firstInvalid = null;
   let badEmail = false;
+  let badNama = false;
   for (const q of schema.questions) {
     const card = document.querySelector(`[data-card="${q.id}"]`);
     let val;
@@ -97,9 +100,18 @@ function collect() {
       badEmail = true;
       continue;
     }
+    if (!empty && q.validation === "nama") {
+      const clean = val.replace(/\s+/g, " ");
+      if (clean.length > 30 || !NAMA_RE.test(clean)) {
+        card.classList.add("invalid");
+        if (!firstInvalid) firstInvalid = card;
+        badNama = true;
+        continue;
+      }
+    }
     if (!empty) answers[q.id] = val;
   }
-  return { answers, firstInvalid, badEmail };
+  return { answers, firstInvalid, badEmail, badNama };
 }
 
 function identityValue() {
@@ -113,12 +125,14 @@ function identityValue() {
 async function submit() {
   const errBox = $("serverErr");
   errBox.hidden = true;
-  const { answers, firstInvalid, badEmail } = collect();
+  const { answers, firstInvalid, badEmail, badNama } = collect();
   if (firstInvalid) {
     firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
     errBox.textContent = badEmail
       ? "Ada alamat email yang formatnya salah (ditandai merah). Contoh: nama@sekolah.id"
-      : "Masih ada pertanyaan wajib yang belum dijawab (ditandai merah).";
+      : badNama
+        ? "Ada isian nama yang tidak valid (ditandai merah): maks 30 karakter, hanya huruf, spasi, titik, koma, dan petik satu."
+        : "Masih ada pertanyaan wajib yang belum dijawab (ditandai merah).";
     errBox.hidden = false;
     return;
   }

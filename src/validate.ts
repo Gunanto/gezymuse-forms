@@ -27,7 +27,7 @@ export interface ValidQuestion {
   points: number;
   correct_answer: string | null; // JSON siap simpan, atau null
   is_identity: boolean;
-  validation: string; // '' | 'email'
+  validation: string; // '' | 'email' | 'nama'
   order_index: number;
 }
 
@@ -75,9 +75,9 @@ export function validateQuestion(body: unknown): VResult<ValidQuestion> {
   const is_identity = body.is_identity === true;
   if (is_identity && t !== "short_text")
     return fail("kunci identitas hanya bisa untuk soal teks singkat");
-  const validation = body.validation === "email" ? "email" : "";
+  const validation = body.validation === "email" || body.validation === "nama" ? body.validation : "";
   if (validation && t !== "short_text")
-    return fail("validasi email hanya bisa untuk soal teks singkat");
+    return fail("validasi email/nama hanya bisa untuk soal teks singkat");
   const points = body.points === undefined || body.points === null ? 0 : Number(body.points);
   if (!Number.isFinite(points) || points < 0 || points > 1000)
     return fail("points harus angka 0–1000");

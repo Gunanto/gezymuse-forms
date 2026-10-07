@@ -315,6 +315,7 @@ function renderQuestions() {
           ${q.required ? `<span class="badge req">wajib</span>` : ""}
           ${q.is_identity ? `<span class="badge" title="Kunci identitas">🔑 identitas</span>` : ""}
           ${q.validation === "email" ? `<span class="badge" title="Validasi format email">✉️ email</span>` : ""}
+          ${q.validation === "nama" ? `<span class="badge" title="Validasi nama: kapital otomatis, maks 30 karakter">🔤 nama</span>` : ""}
           ${state.form.settings.is_quiz ? `<span class="badge">${q.points} poin</span>` : ""}
         </div>
         <div class="muted small">${esc(qPreview(q))}</div>

@@ -86,3 +86,60 @@ describe("Validasi email pada soal teks singkat", () => {
     expect(qid).toBeGreaterThan(0);
   });
 });
+
+describe("Validasi nama pada soal teks singkat", () => {
+  let nslug = "";
+  let namaQid = 0;
+  let nformId = 0;
+
+  beforeAll(async () => {
+    const f = await adminReq("/api/forms", "POST", { title: "Validasi Nama" });
+    const form = (await f.json()).form;
+    nslug = form.slug;
+    nformId = form.id;
+    const q = await adminReq(`/api/forms/${form.id}/questions`, "POST",
+      { qtype: "short_text", prompt: "Nama", required: true, validation: "nama" });
+    namaQid = (await q.json()).question.id;
+    await adminReq(`/api/forms/${form.id}`, "PATCH", { is_published: true });
+  });
+
+  async function storedAnswer(email_ip: string, nama: string) {
+    const r = await pubSubmit(nslug, { answers: { [namaQid]: nama } }, email_ip);
+    if (r.status !== 200) return { status: r.status, body: await r.text() };
+    const list = await (await adminReq(`/api/forms/${nformId}/responses?limit=1`)).json();
+    const rid = list.responses[0].id;
+    const det = await (await adminReq(`/api/forms/${nformId}/responses/${rid}`)).json();
+    return { status: 200, value: det.answers[0].value };
+  }
+
+  test("huruf kecil otomatis jadi kapital tiap kata", async () => {
+    const r = await storedAnswer("10.8.1.1", "budi santoso");
+    expect(r.status).toBe(200);
+    expect(r.value).toBe("Budi Santoso");
+  });
+
+  test("huruf besar semua dinormalkan; gelar campuran tidak rusak", async () => {
+    let r = await storedAnswer("10.8.1.2", "SITI AMINAH");
+    expect(r.value).toBe("Siti Aminah");
+    r = await storedAnswer("10.8.1.3", "Siti Aminah, S.Pd.");
+    expect(r.status).toBe(200);
+    expect(r.value).toBe("Siti Aminah, S.Pd.");
+  });
+
+  test("angka/simbol ditolak; lebih dari 30 karakter ditolak", async () => {
+    let r = await pubSubmit(nslug, { answers: { [namaQid]: "Budi123" } }, "10.8.1.4");
+    expect(r.status).toBe(400);
+    r = await pubSubmit(nslug, { answers: { [namaQid]: "Budi@Santoso" } }, "10.8.1.5");
+    expect(r.status).toBe(400);
+    r = await pubSubmit(nslug, { answers: { [namaQid]: "A".repeat(31) } }, "10.8.1.6");
+    expect(r.status).toBe(400);
+    r = await pubSubmit(nslug, { answers: { [namaQid]: "A".repeat(30) } }, "10.8.1.7");
+    expect(r.status).toBe(200);
+  });
+
+  test("petik satu & titik lolos", async () => {
+    const r = await storedAnswer("10.8.1.8", "d'angelo pratama");
+    expect(r.status).toBe(200);
+    expect(r.value).toBe("D'angelo Pratama");
+  });
+});
