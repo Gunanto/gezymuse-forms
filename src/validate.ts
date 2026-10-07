@@ -26,6 +26,7 @@ export interface ValidQuestion {
   required: boolean;
   points: number;
   correct_answer: string | null; // JSON siap simpan, atau null
+  is_identity: boolean;
   order_index: number;
 }
 
@@ -70,6 +71,9 @@ export function validateQuestion(body: unknown): VResult<ValidQuestion> {
   }
 
   const required = body.required === true;
+  const is_identity = body.is_identity === true;
+  if (is_identity && t !== "short_text")
+    return fail("kunci identitas hanya bisa untuk soal teks singkat");
   const points = body.points === undefined || body.points === null ? 0 : Number(body.points);
   if (!Number.isFinite(points) || points < 0 || points > 1000)
     return fail("points harus angka 0–1000");
@@ -109,7 +113,7 @@ export function validateQuestion(body: unknown): VResult<ValidQuestion> {
 
   return {
     ok: true,
-    value: { qtype: t, prompt, options: optionsJson, required, points, correct_answer: correctJson, order_index },
+    value: { qtype: t, prompt, options: optionsJson, required, points, correct_answer: correctJson, is_identity, order_index },
   };
 }
 
@@ -119,6 +123,7 @@ export interface FormSettings {
   max_responses: number | null;
   is_quiz: boolean;
   show_score: boolean;
+  allow_edit: boolean;
   shuffle_questions: boolean;
   shuffle_options: boolean;
 }
@@ -129,6 +134,7 @@ export const SETTING_DEFAULTS: FormSettings = {
   max_responses: null,
   is_quiz: false,
   show_score: true,
+  allow_edit: false,
   shuffle_questions: false,
   shuffle_options: false,
 };
@@ -137,6 +143,7 @@ const BOOL_KEYS = [
   "accept_responses",
   "is_quiz",
   "show_score",
+  "allow_edit",
   "shuffle_questions",
   "shuffle_options",
 ] as const;

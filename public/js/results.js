@@ -98,7 +98,7 @@ function renderResponses(j) {
   const rows = j.responses
     .map(
       (r) => `<tr>
-        <td class="small">${esc(r.submitted_at)}</td>
+        <td class="small">${esc(r.submitted_at)}${r.updated_at && r.updated_at !== r.submitted_at ? ` <span class="badge" title="Jawaban pernah diubah">diubah</span>` : ""}</td>
         ${isQuiz ? `<td><strong>${r.score ?? "—"}</strong> <button class="btn small ghost" data-s="${r.id}" data-v="${r.score ?? 0}" title="Koreksi skor manual">ubah</button></td>` : ""}
         <td class="nowrap">
           <button class="btn small ghost" data-v="${r.id}">Lihat</button>

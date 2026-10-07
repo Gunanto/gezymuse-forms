@@ -40,14 +40,18 @@ const MIGRATIONS: string[] = [
      required INTEGER NOT NULL DEFAULT 0,
      points REAL NOT NULL DEFAULT 0,
      correct_answer TEXT,
+     is_identity INTEGER NOT NULL DEFAULT 0,
      order_index INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS idx_questions_form ON questions(form_id, order_index)`,
   `CREATE TABLE IF NOT EXISTS responses (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      form_id INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+     identity_key TEXT,
      score REAL,
-     submitted_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+     submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_responses_form ON responses(form_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_responses_identity ON responses(form_id, identity_key)`,
   `CREATE TABLE IF NOT EXISTS answers (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      response_id INTEGER NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
@@ -63,6 +67,28 @@ export function initDb(dataDir: string): Database {
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec(BOOTSTRAP);
+  // Fixup kolom: HARUS jalan sebelum loop MIGRATIONS, karena sebagian
+  // migrasi (mis. CREATE INDEX) mengacu ke kolom-kolom ini.
+  // Di instalasi fresh tabel belum ada — lewati fixup bila tabel belum tersedia.
+  const hasTable = (table: string) =>
+    db.query(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '${table}'`).get();
+  const hasCol = (table: string, col: string) =>
+    hasTable(table) &&
+    db.query(`SELECT 1 FROM pragma_table_info('${table}') WHERE name = '${col}'`).get();
+  // 2026-10-07: kolom identitas bawaan (respondent_name/respondent_class) dihapus —
+  // Nama/Kelas kini dibuat manual sebagai soal oleh admin.
+  for (const col of ["respondent_name", "respondent_class"]) {
+    if (hasCol("responses", col)) db.exec(`ALTER TABLE responses DROP COLUMN ${col}`);
+  }
+  // 2026-10-07: kunci identitas (satu pengisian per jawaban) + edit jawaban.
+  if (hasTable("questions") && !hasCol("questions", "is_identity"))
+    db.exec("ALTER TABLE questions ADD COLUMN is_identity INTEGER NOT NULL DEFAULT 0");
+  if (hasTable("responses") && !hasCol("responses", "identity_key"))
+    db.exec("ALTER TABLE responses ADD COLUMN identity_key TEXT");
+  if (hasTable("responses") && !hasCol("responses", "updated_at"))
+    db.exec("ALTER TABLE responses ADD COLUMN updated_at TEXT");
+  if (hasTable("responses"))
+    db.exec("CREATE INDEX IF NOT EXISTS idx_responses_identity ON responses(form_id, identity_key)");
   for (let i = 0; i < MIGRATIONS.length; i++) {
     const v = i + 1;
     const done = db.query("SELECT 1 FROM schema_migrations WHERE version = ?").get(v);
@@ -70,12 +96,6 @@ export function initDb(dataDir: string): Database {
       db.exec(MIGRATIONS[i]);
       db.query("INSERT INTO schema_migrations (version) VALUES (?)").run(v);
     }
-  }
-  // 2026-10-07: kolom identitas bawaan (respondent_name/respondent_class) dihapus —
-  // Nama/Kelas kini dibuat manual sebagai soal oleh admin.
-  for (const col of ["respondent_name", "respondent_class"]) {
-    const exists = db.query("SELECT 1 FROM pragma_table_info('responses') WHERE name = ?").get(col);
-    if (exists) db.exec(`ALTER TABLE responses DROP COLUMN ${col}`);
   }
   _db = db;
   return db;

@@ -45,7 +45,7 @@ results.get("/forms/:id/responses", (c) => {
   const total = (db.query("SELECT COUNT(*) AS n FROM responses WHERE form_id = ?").get(form.id) as any).n;
   const rows = db
     .query(
-      "SELECT id, score, submitted_at FROM responses WHERE form_id = ? ORDER BY submitted_at DESC, id DESC LIMIT ? OFFSET ?"
+      "SELECT id, score, submitted_at, updated_at FROM responses WHERE form_id = ? ORDER BY submitted_at DESC, id DESC LIMIT ? OFFSET ?"
     )
     .all(form.id, limit, (page - 1) * limit);
   return c.json({ responses: rows, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
@@ -56,7 +56,7 @@ results.get("/forms/:id/responses/:rid", (c) => {
   const form = getForm(db, c.req.param("id"));
   if (!form) return notFound(c);
   const r = db
-    .query("SELECT id, score, submitted_at FROM responses WHERE id = ? AND form_id = ?")
+    .query("SELECT id, score, submitted_at, updated_at FROM responses WHERE id = ? AND form_id = ?")
     .get(c.req.param("rid"), form.id) as any;
   if (!r) return c.json({ error: "Respons tidak ditemukan" }, 404);
   const answers = db

@@ -49,6 +49,20 @@ textarea.gf-text { border-bottom: 1px solid #dadce0; resize: vertical; min-heigh
   border: 1px solid #f5c6c2; background: #fdecec; color: #b3261e;
   border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; font-size: 14px;
 }
+.gf-dup {
+  border: 1px solid #ffe0b2; background: #fff8e1; color: #5d4037;
+  border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; font-size: 14px;
+}
+.gf-dup .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.gf-btn {
+  background: #673ab7; color: #fff; border: none; border-radius: 4px;
+  padding: 8px 18px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.gf-btn:hover { background: #5a2fa0; }
+.gf-btn.ghost { background: #fff; color: #673ab7; border: 1px solid #dadce0; }
+.gf-btn.ghost:hover { background: #f6f4fb; }
+.gf-lock { font-size: 12px; color: #5f6368; margin-top: 6px; }
+.gf-edited { font-size: 12px; color: #1b7a3d; margin-top: 6px; }
 .gf-q.invalid { border-color: #d93025; }
 .gf-done { text-align: left; }
 .gf-done h1 { font-size: 24px; }

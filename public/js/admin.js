@@ -187,6 +187,9 @@ async function openEditor(id) {
     $("sAccept").checked = s.accept_responses !== false;
     $("sQuiz").checked = !!s.is_quiz;
     $("sShowScore").checked = s.show_score !== false;
+    $("sAllowEdit").checked = !!s.allow_edit;
+    // Ubah jawaban nonaktif otomatis untuk kuis (mencegah iterasi nilai).
+    $("sAllowEdit").disabled = !!s.is_quiz;
     $("sShQ").checked = !!s.shuffle_questions;
     $("sShO").checked = !!s.shuffle_options;
     $("sDeadline").value = toLocalInput(s.deadline);
@@ -225,6 +228,7 @@ function renderQuestions() {
         <div class="badges">
           <span class="badge">${QLABEL[q.qtype] || q.qtype}</span>
           ${q.required ? `<span class="badge req">wajib</span>` : ""}
+          ${q.is_identity ? `<span class="badge" title="Kunci identitas">🔑 identitas</span>` : ""}
           ${state.form.settings.is_quiz ? `<span class="badge">${q.points} poin</span>` : ""}
         </div>
         <div class="muted small">${esc(qPreview(q))}</div>
@@ -284,6 +288,7 @@ function initQTypeSelect() {
 function renderQFields() {
   const t = $("qType").value;
   const isChoice = CHOICE_TYPES.includes(t);
+  $("qIdentityRow").hidden = t !== "short_text";
   $("qOptions").innerHTML = "";
   $("qOptions").dataset.t = t;
   $("qScale").hidden = t !== "linear_scale";
@@ -379,6 +384,7 @@ function collectQuestion() {
     prompt,
     options,
     required: $("qRequired").checked,
+    is_identity: $("qType").value === "short_text" && $("qIdentity").checked,
     points: Number($("qPoints").value) || 0,
     correct_answer: collectCorrect(),
   };
@@ -393,6 +399,7 @@ function resetQForm() {
   $("qType").value = "short_text";
   $("qPrompt").value = "";
   $("qRequired").checked = false;
+  $("qIdentity").checked = false;
   $("qPoints").value = 0;
   $("sMin").value = 1; $("sMax").value = 5;
   $("sMinLabel").value = ""; $("sMaxLabel").value = "";
@@ -410,6 +417,7 @@ function startEdit(id) {
   $("qType").value = q.qtype;
   $("qPrompt").value = q.prompt;
   $("qRequired").checked = q.required;
+  $("qIdentity").checked = !!q.is_identity;
   $("qPoints").value = q.points;
   renderQFields();
   if (CHOICE_TYPES.includes(q.qtype)) {
@@ -485,6 +493,7 @@ async function saveSettings() {
         accept_responses: $("sAccept").checked,
         is_quiz: $("sQuiz").checked,
         show_score: $("sShowScore").checked,
+        allow_edit: $("sAllowEdit").checked,
         shuffle_questions: $("sShQ").checked,
         shuffle_options: $("sShO").checked,
         deadline: dl ? new Date(dl).toISOString() : null,
@@ -601,6 +610,10 @@ $("btnCopy").addEventListener("click", async () => {
 
 initQTypeSelect();
 $("qType").addEventListener("change", renderQFields);
+$("sQuiz").addEventListener("change", () => {
+  $("sAllowEdit").disabled = $("sQuiz").checked;
+  if ($("sQuiz").checked) $("sAllowEdit").checked = false;
+});
 $("sMin").addEventListener("input", renderCorrect);
 $("sMax").addEventListener("input", renderCorrect);
 

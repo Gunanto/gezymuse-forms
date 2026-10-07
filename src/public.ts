@@ -82,6 +82,9 @@ pub.get("/forms/:slug", (c) => {
       ...q,
       options: Array.isArray(q.options) ? shuffle(q.options) : q.options,
     }));
+  const idRow = db
+    .query("SELECT id FROM questions WHERE form_id = ? AND is_identity = 1")
+    .get(av.form.id) as any;
   return c.json({
     form: {
       title: av.form.title,
@@ -89,6 +92,9 @@ pub.get("/forms/:slug", (c) => {
       settings: {
         is_quiz: !!s.is_quiz,
         show_score: s.show_score !== false,
+        // Ubah jawaban otomatis nonaktif untuk kuis (mencegah iterasi nilai setelah kunci terlihat).
+        allow_edit: !!s.allow_edit && !s.is_quiz,
+        identity_qid: idRow ? idRow.id : null,
         deadline: s.deadline || null,
       },
     },
@@ -151,6 +157,50 @@ function scoreQuestion(q: any, value: unknown): number {
   return Number(q.points) || 0;
 }
 
+// Normalisasi kunci identitas: bandingkan tanpa peduli huruf besar/kecil & spasi.
+function normIdentity(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim().toLowerCase();
+  return t ? t.slice(0, 200) : null;
+}
+
+type Validated = { qid: number; valueJson: string; score: number; correct: boolean | null };
+
+// Validasi semua jawaban terhadap definisi soal. Dipakai POST (baru) & PUT (ubah).
+function validateSubmission(
+  questions: any[],
+  answers: Record<string, unknown>,
+  isQuiz: boolean
+): { ok: true; validated: Validated[]; score: number; totalPoints: number } | { ok: false; error: string } {
+  const validated: Validated[] = [];
+  let score = 0;
+  let totalPoints = 0;
+  for (const q of questions) {
+    const raw = answers[String(q.id)] ?? answers[q.id];
+    if (isEmpty(raw)) {
+      if (q.required)
+        return { ok: false, error: `Pertanyaan wajib diisi: "${q.prompt.slice(0, 80)}"` };
+      validated.push({ qid: q.id, valueJson: JSON.stringify(null), score: 0, correct: null });
+      continue;
+    }
+    const v = validateAnswer(q, raw);
+    if (v.error) return { ok: false, error: `Soal "${q.prompt.slice(0, 80)}": ${v.error}` };
+    const correct = isQuiz ? checkCorrect(q, v.value) : null;
+    const qs = correct ? Number(q.points) || 0 : 0;
+    score += qs;
+    if (isQuiz && q.correct_answer) totalPoints += Number(q.points) || 0;
+    validated.push({ qid: q.id, valueJson: JSON.stringify(v.value), score: qs, correct });
+  }
+  return { ok: true, validated, score, totalPoints };
+}
+
+function readAnswersBody(body: any): { ok: true; answers: Record<string, unknown> } | { ok: false; error: string } {
+  const answers = body?.answers;
+  if (!answers || typeof answers !== "object" || Array.isArray(answers))
+    return { ok: false, error: "answers harus objek {id_soal: jawaban}" };
+  return { ok: true, answers };
+}
+
 pub.post("/forms/:slug/submit", async (c) => {
   const db = getDb();
   const ip = clientIp(c);
@@ -166,9 +216,8 @@ pub.post("/forms/:slug/submit", async (c) => {
   } catch {
     return c.json({ error: "Body harus JSON valid" }, 400);
   }
-  const answers = body?.answers;
-  if (!answers || typeof answers !== "object" || Array.isArray(answers))
-    return c.json({ error: "answers harus objek {id_soal: jawaban}" }, 400);
+  const ab = readAnswersBody(body);
+  if (!ab.ok) return c.json({ error: ab.error }, 400);
 
   const questions = db
     .query("SELECT * FROM questions WHERE form_id = ? ORDER BY order_index ASC, id ASC")
@@ -176,31 +225,36 @@ pub.post("/forms/:slug/submit", async (c) => {
   const s = av.settings;
   const isQuiz = !!s.is_quiz;
 
-  const validated: { qid: number; valueJson: string; score: number; correct: boolean | null }[] = [];
-  let score = 0;
-  let totalPoints = 0;
+  const vs = validateSubmission(questions, ab.answers, isQuiz);
+  if (!vs.ok) return c.json({ error: vs.error }, 400);
+  const { validated, score, totalPoints } = vs;
 
-  for (const q of questions) {
-    const raw = answers[String(q.id)] ?? answers[q.id];
-    if (isEmpty(raw)) {
-      if (q.required)
-        return c.json({ error: `Pertanyaan wajib diisi: "${q.prompt.slice(0, 80)}"` }, 400);
-      validated.push({ qid: q.id, valueJson: JSON.stringify(null), score: 0, correct: null });
-      continue;
+  // Kunci identitas: satu pengisian per jawaban soal yang ditandai.
+  const idQ = questions.find((q) => q.is_identity);
+  let identityKey: string | null = null;
+  if (idQ) {
+    const v = validated.find((a) => a.qid === idQ.id);
+    identityKey = normIdentity(v ? JSON.parse(v.valueJson) : null);
+  }
+  if (identityKey) {
+    const dup = db
+      .query("SELECT id FROM responses WHERE form_id = ? AND identity_key = ?")
+      .get(av.form.id, identityKey) as any;
+    if (dup) {
+      const canEdit = !!s.allow_edit && !isQuiz;
+      return c.json(
+        canEdit
+          ? { error: "Identitas ini sudah mengisi formulir.", code: "already_submitted" }
+          : { error: "Identitas ini sudah mengisi formulir ini." },
+        409
+      );
     }
-    const v = validateAnswer(q, raw);
-    if (v.error) return c.json({ error: `Soal "${q.prompt.slice(0, 80)}": ${v.error}` }, 400);
-    const correct = isQuiz ? checkCorrect(q, v.value) : null;
-    const qs = correct ? Number(q.points) || 0 : 0;
-    score += qs;
-    if (isQuiz && q.correct_answer) totalPoints += Number(q.points) || 0;
-    validated.push({ qid: q.id, valueJson: JSON.stringify(v.value), score: qs, correct });
   }
 
   const tx = db.transaction(() => {
     const info = db
-      .query("INSERT INTO responses (form_id, score) VALUES (?, ?)")
-      .run(av.form.id, isQuiz ? score : null);
+      .query("INSERT INTO responses (form_id, identity_key, score) VALUES (?, ?, ?)")
+      .run(av.form.id, identityKey, isQuiz ? score : null);
     const rid = Number(info.lastInsertRowid);
     const ins = db.query("INSERT INTO answers (response_id, question_id, value) VALUES (?, ?, ?)");
     for (const a of validated) ins.run(rid, a.qid, a.valueJson);
@@ -231,6 +285,90 @@ pub.post("/forms/:slug/submit", async (c) => {
     });
   }
   return c.json(out);
+});
+
+// Ambil jawaban sendiri untuk diubah (berdasar kunci identitas).
+pub.get("/forms/:slug/mine", (c) => {
+  const db = getDb();
+  if (hit(reads, clientIp(c), MAX_READS))
+    return c.json({ error: "Terlalu banyak permintaan. Coba lagi nanti." }, 429);
+  const av = checkAvailability(db, c.req.param("slug"));
+  if (!av.ok) return c.json({ error: av.error }, av.status);
+  const s = av.settings;
+  if (!s.allow_edit || s.is_quiz)
+    return c.json({ error: "Fitur ubah jawaban tidak aktif untuk formulir ini." }, 403);
+  const hasId = db
+    .query("SELECT 1 FROM questions WHERE form_id = ? AND is_identity = 1")
+    .get(av.form.id);
+  if (!hasId) return c.json({ error: "Formulir ini tidak memakai kunci identitas." }, 400);
+  const identity = normIdentity(c.req.query("identity"));
+  if (!identity) return c.json({ error: "Identitas wajib diisi." }, 400);
+  const resp = db
+    .query("SELECT id FROM responses WHERE form_id = ? AND identity_key = ?")
+    .get(av.form.id, identity) as any;
+  if (!resp) return c.json({ error: "Identitas tidak ditemukan." }, 404);
+  const rows = db
+    .query("SELECT question_id, value FROM answers WHERE response_id = ?")
+    .all(resp.id) as any[];
+  const answers: Record<string, unknown> = {};
+  for (const r of rows) answers[r.question_id] = JSON.parse(r.value);
+  return c.json({ answers });
+});
+
+// Ubah jawaban yang sudah terkirim (berdasar kunci identitas).
+pub.put("/forms/:slug/submit", async (c) => {
+  const db = getDb();
+  const ip = clientIp(c);
+  if (hit(submits, ip, MAX_SUBMITS))
+    return c.json({ error: "Terlalu banyak pengiriman. Coba lagi beberapa menit." }, 429);
+  const av = checkAvailability(db, c.req.param("slug"));
+  if (!av.ok) return c.json({ error: av.error }, av.status);
+  const s = av.settings;
+  const isQuiz = !!s.is_quiz;
+  if (!s.allow_edit || isQuiz)
+    return c.json({ error: "Fitur ubah jawaban tidak aktif untuk formulir ini." }, 403);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Body harus JSON valid" }, 400);
+  }
+  const ab = readAnswersBody(body);
+  if (!ab.ok) return c.json({ error: ab.error }, 400);
+  const identity = normIdentity(body?.identity);
+  if (!identity) return c.json({ error: "Identitas wajib diisi." }, 400);
+
+  const questions = db
+    .query("SELECT * FROM questions WHERE form_id = ? ORDER BY order_index ASC, id ASC")
+    .all(av.form.id) as any[];
+  const idQ = questions.find((q) => q.is_identity);
+  if (!idQ) return c.json({ error: "Formulir ini tidak memakai kunci identitas." }, 400);
+  const resp = db
+    .query("SELECT id FROM responses WHERE form_id = ? AND identity_key = ?")
+    .get(av.form.id, identity) as any;
+  if (!resp) return c.json({ error: "Identitas tidak ditemukan." }, 404);
+
+  const vs = validateSubmission(questions, ab.answers, isQuiz);
+  if (!vs.ok) return c.json({ error: vs.error }, 400);
+  const { validated, score } = vs;
+
+  // Kunci identitas tidak boleh diganti saat mengubah jawaban.
+  const idAns = validated.find((a) => a.qid === idQ.id);
+  if (normIdentity(idAns ? JSON.parse(idAns.valueJson) : null) !== identity)
+    return c.json({ error: "Kunci identitas tidak boleh diubah." }, 400);
+
+  const tx = db.transaction(() => {
+    db.query("DELETE FROM answers WHERE response_id = ?").run(resp.id);
+    const ins = db.query("INSERT INTO answers (response_id, question_id, value) VALUES (?, ?, ?)");
+    for (const a of validated) ins.run(resp.id, a.qid, a.valueJson);
+    db.query("UPDATE responses SET score = ?, updated_at = datetime('now') WHERE id = ?").run(
+      isQuiz ? score : null,
+      resp.id
+    );
+  });
+  tx();
+  return c.json({ ok: true, message: "Jawaban diperbarui. Terima kasih!" });
 });
 
 export default pub;

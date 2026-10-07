@@ -5,6 +5,7 @@ const esc = (s) =>
 
 const slug = location.pathname.split("/").filter(Boolean).pop() || "";
 let schema = null;
+let editMode = false;
 
 function showError(msg) {
   $("loading").hidden = true;
@@ -90,6 +91,14 @@ function collect() {
   return { answers, firstInvalid };
 }
 
+function identityValue() {
+  const qid = schema.form.settings.identity_qid;
+  if (!qid) return "";
+  const card = document.querySelector(`[data-card="${qid}"]`);
+  const inp = card && card.querySelector("[data-t=text]");
+  return inp ? inp.value.trim() : "";
+}
+
 async function submit() {
   const errBox = $("serverErr");
   errBox.hidden = true;
@@ -102,16 +111,28 @@ async function submit() {
   }
   const btn = $("btnSubmit");
   btn.disabled = true;
-  btn.textContent = "Mengirim…";
+  btn.textContent = editMode ? "Memperbarui…" : "Mengirim…";
   try {
+    const payload = editMode ? { identity: identityValue(), answers } : { answers };
     const r = await fetch(`/api/public/forms/${encodeURIComponent(slug)}/submit`, {
-      method: "POST",
+      method: editMode ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify(payload),
     });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `Gagal mengirim (HTTP ${r.status})`);
+    if (!r.ok) {
+      // Identitas sudah mengisi & boleh ubah: tawarkan memuat jawaban lama.
+      if (r.status === 409 && j.code === "already_submitted" && !editMode) {
+        $("dupBox").hidden = false;
+        $("dupBox").scrollIntoView({ behavior: "smooth", block: "center" });
+        btn.disabled = false;
+        btn.textContent = "Kirim";
+        return;
+      }
+      throw new Error(j.error || `Gagal mengirim (HTTP ${r.status})`);
+    }
     $("formView").hidden = true;
+    if (editMode) $("doneTitle").textContent = "Jawaban diperbarui ✓";
     if (j.score !== undefined) {
       $("scoreBox").hidden = false;
       $("scoreText").textContent = `Nilai: ${j.score} dari ${j.total_points}`;
@@ -124,7 +145,74 @@ async function submit() {
     errBox.hidden = false;
     errBox.scrollIntoView({ behavior: "smooth", block: "center" });
     btn.disabled = false;
-    btn.textContent = "Kirim";
+    btn.textContent = editMode ? "Perbarui jawaban" : "Kirim";
+  }
+}
+
+function fillForm(answers) {
+  for (const q of schema.questions) {
+    const card = document.querySelector(`[data-card="${q.id}"]`);
+    if (!card) continue;
+    const v = answers[String(q.id)] ?? answers[q.id];
+    if (v === null || v === undefined) continue;
+    if (q.qtype === "short_text" || q.qtype === "paragraph") {
+      card.querySelector("[data-t=text]").value = v;
+    } else if (q.qtype === "multiple_choice" || q.qtype === "linear_scale") {
+      const target = String(v);
+      card.querySelectorAll("input").forEach((i) => { i.checked = i.value === target; });
+    } else if (q.qtype === "checkboxes") {
+      const set = new Set((Array.isArray(v) ? v : []).map(String));
+      card.querySelectorAll("input").forEach((i) => { i.checked = set.has(i.value); });
+    } else if (q.qtype === "dropdown") {
+      card.querySelector("select").value = v;
+    }
+  }
+}
+
+function enterEditMode() {
+  editMode = true;
+  $("dupBox").hidden = true;
+  $("editBar").hidden = false;
+  const qid = schema.form.settings.identity_qid;
+  if (qid) {
+    const card = document.querySelector(`[data-card="${qid}"]`);
+    const inp = card && card.querySelector("[data-t=text]");
+    if (inp) {
+      inp.disabled = true;
+      const note = document.createElement("div");
+      note.className = "gf-lock";
+      note.textContent = "🔒 Kunci identitas tidak bisa diubah.";
+      card.appendChild(note);
+    }
+  }
+  $("btnSubmit").textContent = "Perbarui jawaban";
+  window.scrollTo(0, 0);
+}
+
+async function loadMine() {
+  const idv = identityValue();
+  if (!idv) {
+    $("serverErr").textContent = "Isi dulu kunci identitas (mis. email) pada formulir, lalu klik “Ubah jawaban saya”.";
+    $("serverErr").hidden = false;
+    return;
+  }
+  const btn = $("btnEditMine");
+  btn.disabled = true;
+  btn.textContent = "Memuat…";
+  try {
+    const r = await fetch(
+      `/api/public/forms/${encodeURIComponent(slug)}/mine?identity=${encodeURIComponent(idv)}`
+    );
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Gagal memuat jawaban.");
+    fillForm(j.answers);
+    enterEditMode();
+  } catch (e) {
+    $("serverErr").textContent = e.message;
+    $("serverErr").hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Ubah jawaban saya";
   }
 }
 
@@ -166,3 +254,5 @@ function renderReview(review) {
 })();
 
 $("btnSubmit").addEventListener("click", submit);
+$("btnEditMine").addEventListener("click", loadMine);
+$("btnDupClose").addEventListener("click", () => { $("dupBox").hidden = true; });

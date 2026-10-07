@@ -24,6 +24,17 @@
       <p id="fDesc"></p>
     </div>
     <div id="serverErr" class="gf-err" hidden></div>
+    <div id="dupBox" class="gf-dup" hidden>
+      <div><b>Identitas ini sudah mengisi formulir.</b></div>
+      <div class="muted" style="margin-top:4px">Mau memperbaiki jawaban yang sudah terkirim?</div>
+      <div class="row">
+        <button id="btnEditMine" class="gf-btn">Ubah jawaban saya</button>
+        <button id="btnDupClose" class="gf-btn ghost">Tutup</button>
+      </div>
+    </div>
+    <div id="editBar" class="gf-dup" hidden>
+      <div><b>Mode ubah jawaban</b> — perbaiki jawaban di bawah lalu klik <b>Perbarui jawaban</b>.</div>
+    </div>
     <div id="qList"></div>
     <button id="btnSubmit" class="gf-submit">Kirim</button>
     <p class="gf-foot">GezyForm — formulir milik sekolah, data tersimpan di server sekolah</p>
@@ -31,7 +42,7 @@
 
   <div id="doneView" hidden>
     <div class="gf-card gf-title-card gf-done">
-      <h1>Jawaban terkirim ✓</h1>
+      <h1 id="doneTitle">Jawaban terkirim ✓</h1>
       <p>Terima kasih sudah mengisi formulir ini.</p>
       <div id="scoreBox" hidden><span class="gf-score" id="scoreText"></span></div>
     </div>
