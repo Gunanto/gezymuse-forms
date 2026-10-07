@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GezyForm — Isi Formulir</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <span class="logo">📝</span>
+    <div><h1>GezyForm</h1><p id="slugLine">Memuat formulir…</p></div>
+  </header>
+  <section class="card">
+    <p>Halaman responden (<code id="slugCode"></code>) akan tampil penuh di <b>Tahap 3</b>:
+    render soal dari server, validasi, lalu submit.</p>
+  </section>
+</div>
+<script>
+const slug = location.pathname.split("/").filter(Boolean).pop() || "";
+document.getElementById("slugCode").textContent = "/f/" + slug;
+document.getElementById("slugLine").textContent = "Formulir: " + slug;
+</script>
+</body>
+</html>

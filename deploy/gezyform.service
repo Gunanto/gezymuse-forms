@@ -1,0 +1,19 @@
+[Unit]
+Description=GezyForm - aplikasi formulir ala Google Forms (Bun + Hono + SQLite)
+After=network.target
+
+[Service]
+Type=simple
+# Ganti USER_VPS dengan user Linux di VPS Pak Gun
+User=USER_VPS
+WorkingDirectory=/opt/gezyform/gezymuse-forms
+ExecStart=/home/USER_VPS/.bun/bin/bun run src/index.ts
+Restart=always
+RestartSec=5
+Environment=PORT=3022
+Environment=DATA_DIR=/opt/gezyform/data
+Environment=ADMIN_PASSWORD=ganti-dengan-password-yang-kuat
+Environment=COOKIE_SECURE=1
+
+[Install]
+WantedBy=multi-user.target

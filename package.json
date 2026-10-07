@@ -1,0 +1,1 @@
+{"dependencies":{"hono":"^4.7.0"},"description":"GezyForm — aplikasi formulir ala Google Forms (Bun + Hono + bun:sqlite)","name":"gezymuse-forms","scripts":{"dev":"bun --watch run src/index.ts","start":"bun run src/index.ts","test":"bun test"},"type":"module","version":"0.1.0"}

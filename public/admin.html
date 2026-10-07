@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GezyForm — Admin</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <span class="logo">📝</span>
+    <div><h1>GezyForm</h1><p>Admin formulir</p></div>
+  </header>
+
+  <section id="loginCard" class="card" hidden>
+    <h2>Masuk</h2>
+    <label>Username
+      <input id="username" value="admin" autocomplete="username">
+    </label>
+    <label>Password
+      <input id="password" type="password" autocomplete="current-password">
+    </label>
+    <p id="loginErr" class="err" hidden></p>
+    <button id="btnLogin" class="btn">Masuk</button>
+  </section>
+
+  <section id="dashCard" class="card" hidden>
+    <h2>Halo, <span id="who"></span> 👋</h2>
+    <p>Fondasi <b>Tahap 1</b> berjalan: server + database + login + rate-limit.</p>
+    <p>Builder formulir hadir di <b>Tahap 2</b>.</p>
+    <button id="btnLogout" class="btn ghost">Keluar</button>
+  </section>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function refresh() {
+  const r = await fetch("/api/me");
+  if (r.ok) {
+    const { user } = await r.json();
+    $("who").textContent = user.username;
+    $("loginCard").hidden = true;
+    $("dashCard").hidden = false;
+  } else {
+    $("loginCard").hidden = false;
+    $("dashCard").hidden = true;
+  }
+}
+
+$("btnLogin").addEventListener("click", async () => {
+  $("loginErr").hidden = true;
+  const r = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: $("username").value, password: $("password").value }),
+  });
+  if (r.ok) { $("password").value = ""; refresh(); }
+  else {
+    const j = await r.json().catch(() => ({}));
+    $("loginErr").textContent = j.error || "Gagal masuk";
+    $("loginErr").hidden = false;
+  }
+});
+$("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnLogin").click(); });
+$("btnLogout").addEventListener("click", async () => {
+  await fetch("/api/logout", { method: "POST" });
+  refresh();
+});
+refresh();
+</script>
+</body>
+</html>
