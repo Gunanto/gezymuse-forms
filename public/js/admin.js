@@ -233,11 +233,12 @@ function renderQuestions() {
         </div>
         <div class="muted small">${esc(qPreview(q))}</div>
       </div>
-      <div class="qactions">
-        <button class="btn small ghost" data-a="up" data-id="${q.id}" ${i === 0 ? "disabled" : ""}>↑</button>
-        <button class="btn small ghost" data-a="down" data-id="${q.id}" ${i === qs.length - 1 ? "disabled" : ""}>↓</button>
-        <button class="btn small ghost" data-a="edit" data-id="${q.id}">Ubah</button>
-        <button class="btn small ghost" data-a="del" data-id="${q.id}">Hapus</button>
+      <div class="qactions icons">
+        <button class="iconbtn" data-a="up" data-id="${q.id}" title="Naik" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button class="iconbtn" data-a="down" data-id="${q.id}" title="Turun" ${i === qs.length - 1 ? "disabled" : ""}>↓</button>
+        <button class="iconbtn" data-a="dup" data-id="${q.id}" title="Duplikat soal">⧉</button>
+        <button class="iconbtn" data-a="edit" data-id="${q.id}" title="Ubah soal">✏️</button>
+        <button class="iconbtn" data-a="del" data-id="${q.id}" title="Hapus soal">🗑</button>
       </div>
     </div>`
     )
@@ -270,6 +271,15 @@ async function qAction(a, id) {
       await api(`/api/forms/${state.form.id}/questions/reorder`, "POST", { order: qs.map((q) => q.id) });
     } else if (a === "edit") {
       startEdit(id);
+      return;
+    } else if (a === "dup") {
+      const q = state.questions.find((x) => x.id === id);
+      if (!q) return;
+      const { id: _drop, form_id: _f, order_index: _o, ...rest } = q;
+      // Duplikat tidak mewarisi kunci identitas (hanya satu per formulir).
+      await api(`/api/forms/${state.form.id}/questions`, "POST", { ...rest, is_identity: false });
+      await refreshEditor();
+      toast("Soal diduplikat");
       return;
     }
     await refreshEditor();
