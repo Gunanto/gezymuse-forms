@@ -13,9 +13,10 @@ function showError(msg) {
   document.title = "Formulir tidak tersedia — GezyForm";
 }
 
-function inputFor(q) {
+function inputFor(q, showPoints) {
   const req = q.required ? `<span class="req">*</span>` : "";
-  const head = `<div class="qprompt">${esc(q.prompt)}${req}</div>`;
+  const pts = showPoints && q.points > 0 ? ` <span class="pts">${q.points} poin</span>` : "";
+  const head = `<div class="qprompt">${esc(q.prompt)}${req}${pts}</div>`;
   const name = `q_${q.id}`;
   if (q.qtype === "short_text")
     return `${head}<input class="gf-text" data-q="${q.id}" data-t="text" placeholder="Jawaban Anda">`;
@@ -54,8 +55,9 @@ function render() {
   $("fTitle").textContent = f.title;
   $("fDesc").textContent = f.description || "";
   if (f.settings.require_name) $("identityCard").hidden = false;
+  const showPoints = !!f.settings.is_quiz;
   $("qList").innerHTML = schema.questions
-    .map((q) => `<div class="gf-card gf-q" data-card="${q.id}">${inputFor(q)}</div>`)
+    .map((q) => `<div class="gf-card gf-q" data-card="${q.id}">${inputFor(q, showPoints)}</div>`)
     .join("");
   $("loading").hidden = true;
   $("formView").hidden = false;
@@ -119,6 +121,7 @@ async function submit() {
       $("scoreBox").hidden = false;
       $("scoreText").textContent = `Nilai: ${j.score} dari ${j.total_points}`;
     }
+    if (j.review) renderReview(j.review);
     $("doneView").hidden = false;
     window.scrollTo(0, 0);
   } catch (e) {
@@ -128,6 +131,30 @@ async function submit() {
     btn.disabled = false;
     btn.textContent = "Kirim";
   }
+}
+
+function fmtAns(v) {
+  if (v === null || v === undefined || v === "") return "—";
+  return Array.isArray(v) ? v.join("; ") : String(v);
+}
+
+function renderReview(review) {
+  const box = $("reviewList");
+  box.innerHTML = `<div class="gf-card"><h3 class="rv-title">Pembahasan</h3>` +
+    review.map((r, i) => {
+      let status;
+      if (r.is_correct === true) status = `<span class="rv-ok">✓ Benar (+${r.points_earned})</span>`;
+      else if (r.is_correct === false) status = `<span class="rv-bad">✗ Kurang tepat (+${r.points_earned})</span>`;
+      else if (r.needs_manual) status = `<span class="rv-man">⏳ Dinilai manual oleh guru</span>`;
+      else status = `<span class="muted">Tidak dinilai</span>`;
+      const key = r.correct_answer !== null && r.correct_answer !== undefined
+        ? `<div class="rv-key">Kunci: <b>${esc(fmtAns(r.correct_answer))}</b></div>` : "";
+      return `<div class="rv-item">
+        <div class="qprompt">${i + 1}. ${esc(r.prompt)} <span class="rv-pts">${r.points} poin</span></div>
+        <div>Jawaban Anda: <b>${esc(fmtAns(r.your_answer))}</b> ${status}</div>
+        ${key}
+      </div>`;
+    }).join("") + `</div>`;
 }
 
 (async function init() {

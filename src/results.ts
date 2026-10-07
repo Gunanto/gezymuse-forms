@@ -81,6 +81,31 @@ results.delete("/forms/:id/responses/:rid", (c) => {
   return c.json({ ok: true });
 });
 
+// Koreksi skor manual oleh admin (mis. setelah menilai soal teks).
+results.patch("/forms/:id/responses/:rid/score", async (c) => {
+  const db = getDb();
+  const form = getForm(db, c.req.param("id"));
+  if (!form) return notFound(c);
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Body harus JSON valid" }, 400);
+  }
+  const score = Number(body?.score);
+  if (!Number.isFinite(score) || score < 0)
+    return c.json({ error: "score harus angka >= 0" }, 400);
+  const questions = orderedQuestions(db, form.id);
+  const totalPoints = questions.reduce((a, q) => a + (Number(q.points) || 0), 0);
+  if (totalPoints > 0 && score > totalPoints)
+    return c.json({ error: `score maks ${totalPoints} (total poin)` }, 400);
+  const info = db
+    .query("UPDATE responses SET score = ? WHERE id = ? AND form_id = ?")
+    .run(score, c.req.param("rid"), form.id);
+  if (!info.changes) return c.json({ error: "Respons tidak ditemukan" }, 404);
+  return c.json({ ok: true, score });
+});
+
 // ---------- ringkasan per soal ----------
 
 function summarizeQuestion(db: ReturnType<typeof getDb>, q: any, isQuiz: boolean) {
@@ -147,11 +172,29 @@ results.get("/forms/:id/summary", (c) => {
   const settings = JSON.parse(form.settings || "{}");
   const questions = orderedQuestions(db, form.id);
   const total = (db.query("SELECT COUNT(*) AS n FROM responses WHERE form_id = ?").get(form.id) as any).n;
-  return c.json({
+  const out: Record<string, unknown> = {
     form: { id: form.id, title: form.title, settings },
     total_responses: total,
     questions: questions.map((q) => summarizeQuestion(db, q, !!settings.is_quiz)),
-  });
+  };
+  if (settings.is_quiz) {
+    const scores = (
+      db.query("SELECT score FROM responses WHERE form_id = ? AND score IS NOT NULL").all(form.id) as any[]
+    ).map((r) => Number(r.score));
+    const totalPoints = questions
+      .filter((q) => q.correct_answer)
+      .reduce((a, q) => a + (Number(q.points) || 0), 0);
+    out.score_stats = scores.length
+      ? {
+          count: scores.length,
+          avg: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10,
+          max: Math.max(...scores),
+          min: Math.min(...scores),
+          total_points: totalPoints,
+        }
+      : null;
+  }
+  return c.json(out);
 });
 
 // ---------- ekspor ----------

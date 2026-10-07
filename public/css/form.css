@@ -57,3 +57,16 @@ textarea.gf-text { border-bottom: 1px solid #dadce0; resize: vertical; min-heigh
   background: #f0ebf8; border-radius: 8px; padding: 14px 18px; display: inline-block;
 }
 .gf-loading { text-align: center; color: #5f6368; padding: 60px 20px; }
+.pts {
+  display: inline-block; font-size: 12px; font-weight: 500; color: #673ab7;
+  background: #f0ebf8; border-radius: 999px; padding: 2px 10px; margin-left: 8px;
+  vertical-align: middle;
+}
+.rv-title { margin: 0 0 8px; font-size: 20px; color: #202124; }
+.rv-item { border-top: 1px solid #e0e0e0; padding: 14px 0; }
+.rv-item:first-of-type { border-top: none; }
+.rv-pts { font-size: 12px; color: #5f6368; font-weight: 400; }
+.rv-ok { color: #1b7a2e; font-weight: 500; }
+.rv-bad { color: #d93025; font-weight: 500; }
+.rv-man { color: #b06000; font-weight: 500; }
+.rv-key { margin-top: 6px; color: #5f6368; font-size: 14px; }

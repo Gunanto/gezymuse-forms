@@ -63,6 +63,7 @@ deploy/
 | GET | /api/forms/:id/summary | sesi | ringkasan per soal (hitungan opsi, rata-rata skala, sampel teks, akurasi kuis) |
 | GET | /api/forms/:id/export.csv | sesi | unduh CSV (BOM, escaping benar) |
 | GET | /api/forms/:id/export/word | sesi | unduh Word (.doc tabel) |
+| PATCH | /api/forms/:id/responses/:rid/score | sesi | koreksi skor manual (0–total poin) |
 
 ## Tahapan
 
@@ -70,8 +71,8 @@ deploy/
 2. ✅ Builder: CRUD form & soal (6 tipe MVP), admin UI
 3. ✅ Responden: halaman /f/:slug ala Google Forms + submit tervalidasi
 4. ✅ Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
-5. Kuis: kunci jawaban, skor otomatis server-side
-6. Hardening: rate-limit submit, backup, uji penuh
+5. ✅ Kuis: nilai + pembahasan per soal, statistik nilai, koreksi manual
+6. Hardening: rate-limit submit, backup, uji penuh + restyle builder ala Google Forms
 
 ## Deploy
 

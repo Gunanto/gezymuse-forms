@@ -115,21 +115,26 @@ function validateAnswer(q: any, raw: unknown): { value?: unknown; error?: string
   return { error: "tipe soal tidak dikenal" };
 }
 
-// Nilai otomatis (khusus is_quiz). Soal teks tidak dinilai otomatis.
-function scoreQuestion(q: any, value: unknown): number {
+// Benar/salah per soal (khusus is_quiz). null = tidak bisa dinilai otomatis
+// (tanpa kunci, atau soal teks yang perlu dinilai manual).
+function checkCorrect(q: any, value: unknown): boolean | null {
   const ca = q.correct_answer ? JSON.parse(q.correct_answer) : null;
-  if (ca === null || ca === undefined) return 0;
-  const pts = Number(q.points) || 0;
-  if (pts <= 0) return 0;
+  if (ca === null || ca === undefined) return null;
   const t = q.qtype as string;
-  if (t === "multiple_choice" || t === "dropdown") return value === ca ? pts : 0;
+  if (t === "multiple_choice" || t === "dropdown") return value === ca;
   if (t === "checkboxes") {
     const a = [...new Set(value as string[])].sort();
     const b = [...new Set(ca as string[])].sort();
-    return a.length === b.length && a.every((x, i) => x === b[i]) ? pts : 0;
+    return a.length === b.length && a.every((x, i) => x === b[i]);
   }
-  if (t === "linear_scale") return Number(value) === ca ? pts : 0;
-  return 0;
+  if (t === "linear_scale") return Number(value) === ca;
+  return null;
+}
+
+// Nilai otomatis (khusus is_quiz). Soal teks tidak dinilai otomatis.
+function scoreQuestion(q: any, value: unknown): number {
+  if (!checkCorrect(q, value)) return 0;
+  return Number(q.points) || 0;
 }
 
 pub.post("/forms/:slug/submit", async (c) => {
@@ -159,7 +164,7 @@ pub.post("/forms/:slug/submit", async (c) => {
   const s = av.settings;
   const isQuiz = !!s.is_quiz;
 
-  const validated: { qid: number; valueJson: string; score: number }[] = [];
+  const validated: { qid: number; valueJson: string; score: number; correct: boolean | null }[] = [];
   let score = 0;
   let totalPoints = 0;
 
@@ -168,15 +173,16 @@ pub.post("/forms/:slug/submit", async (c) => {
     if (isEmpty(raw)) {
       if (q.required)
         return c.json({ error: `Pertanyaan wajib diisi: "${q.prompt.slice(0, 80)}"` }, 400);
-      validated.push({ qid: q.id, valueJson: JSON.stringify(null), score: 0 });
+      validated.push({ qid: q.id, valueJson: JSON.stringify(null), score: 0, correct: null });
       continue;
     }
     const v = validateAnswer(q, raw);
     if (v.error) return c.json({ error: `Soal "${q.prompt.slice(0, 80)}": ${v.error}` }, 400);
-    const qs = isQuiz ? scoreQuestion(q, v.value) : 0;
+    const correct = isQuiz ? checkCorrect(q, v.value) : null;
+    const qs = correct ? Number(q.points) || 0 : 0;
     score += qs;
     if (isQuiz && q.correct_answer) totalPoints += Number(q.points) || 0;
-    validated.push({ qid: q.id, valueJson: JSON.stringify(v.value), score: qs });
+    validated.push({ qid: q.id, valueJson: JSON.stringify(v.value), score: qs, correct });
   }
 
   const name = typeof body.respondent_name === "string" ? body.respondent_name.trim().slice(0, 100) : "";
@@ -213,6 +219,23 @@ pub.post("/forms/:slug/submit", async (c) => {
   if (isQuiz && s.show_score !== false) {
     out.score = score;
     out.total_points = totalPoints;
+    // Pembahasan per soal (ala Google Forms): kunci hanya tampil bila
+    // show_score aktif — sesuai pengaturan pemilik formulir.
+    out.review = questions.map((q, i) => {
+      const v = validated[i];
+      const pts = Number(q.points) || 0;
+      const auto = v.correct !== null;
+      return {
+        prompt: q.prompt,
+        qtype: q.qtype,
+        points: pts,
+        your_answer: JSON.parse(v.valueJson),
+        correct_answer: auto ? JSON.parse(q.correct_answer) : null,
+        is_correct: v.correct,
+        points_earned: v.score,
+        needs_manual: !auto && pts > 0,
+      };
+    });
   }
   return c.json(out);
 });

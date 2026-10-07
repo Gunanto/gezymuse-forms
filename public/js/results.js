@@ -54,7 +54,19 @@ function renderSummary(j) {
     box.innerHTML = `<div class="card"><p class="muted">Belum ada respons masuk. Bagikan link formulir ke responden.</p></div>`;
     return;
   }
-  box.innerHTML = j.questions
+  let html = "";
+  if (j.score_stats) {
+    const s = j.score_stats;
+    html += `<div class="card"><h3>📊 Statistik nilai</h3>
+      <div class="badges">
+        <span class="badge">Rata-rata: ${s.avg}</span>
+        <span class="badge">Tertinggi: ${s.max}</span>
+        <span class="badge">Terendah: ${s.min}</span>
+        <span class="badge">Total poin: ${s.total_points}</span>
+        <span class="badge">${s.count} dinilai</span>
+      </div></div>`;
+  }
+  box.innerHTML = html + j.questions
     .map((q, i) => {
       let body = "";
       if (q.kind === "choice") {
@@ -89,7 +101,7 @@ function renderResponses(j) {
         <td>${esc(r.respondent_name || "—")}</td>
         <td>${esc(r.respondent_class || "—")}</td>
         <td class="small">${esc(r.submitted_at)}</td>
-        ${isQuiz ? `<td><strong>${r.score ?? "—"}</strong></td>` : ""}
+        ${isQuiz ? `<td><strong>${r.score ?? "—"}</strong> <button class="btn small ghost" data-s="${r.id}" data-v="${r.score ?? 0}" title="Koreksi skor manual">ubah</button></td>` : ""}
         <td class="nowrap">
           <button class="btn small ghost" data-v="${r.id}">Lihat</button>
           <button class="btn small ghost" data-d="${r.id}" data-n="${esc(r.respondent_name || "tanpa nama")}">Hapus</button>
@@ -105,6 +117,9 @@ function renderResponses(j) {
   );
   $("respTable").querySelectorAll("[data-d]").forEach((b) =>
     b.addEventListener("click", () => delResponse(Number(b.dataset.d), b.dataset.n))
+  );
+  $("respTable").querySelectorAll("[data-s]").forEach((b) =>
+    b.addEventListener("click", () => editScore(Number(b.dataset.s), Number(b.dataset.v)))
   );
   const pager = $("respPager");
   pager.innerHTML =
@@ -138,6 +153,20 @@ async function viewResponse(rid) {
 function fmtVal(v) {
   if (v === null || v === undefined) return "";
   return Array.isArray(v) ? v.join("; ") : String(v);
+}
+
+async function editScore(rid, cur) {
+  const v = prompt("Skor baru:", String(cur));
+  if (v === null) return;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) { toast("Skor harus angka >= 0", true); return; }
+  try {
+    await api(`/api/forms/${R.formId}/responses/${rid}/score`, "PATCH", { score: n });
+    toast("Skor diperbarui");
+    renderResultsTab();
+  } catch (e) {
+    toast(e.message, true);
+  }
 }
 
 async function delResponse(rid, name) {
