@@ -26,6 +26,7 @@ nano .env   # isi ADMIN_PASSWORD yang kuat, pastikan COOKIE_SECURE=1
 ```bash
 sudo cp deploy/gezyform.service /etc/systemd/system/
 sudo nano /etc/systemd/system/gezyform.service  # ganti USER_VPS
+# (password admin TIDAK perlu diset di file service — cukup di .env, langkah 2)
 sudo systemctl daemon-reload
 sudo systemctl enable --now gezyform
 sudo systemctl status gezyform   # pastikan active (running)

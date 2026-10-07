@@ -12,7 +12,8 @@ Restart=always
 RestartSec=5
 Environment=PORT=3022
 Environment=DATA_DIR=/opt/gezyform/data
-Environment=ADMIN_PASSWORD=ganti-dengan-password-yang-kuat
+# Password admin diambil dari file .env (ADMIN_PASSWORD) — lihat deploy/DEPLOY.md.
+# Sengaja TIDAK diset di sini agar nilai .env tidak tertimpa diam-diam.
 Environment=COOKIE_SECURE=1
 
 [Install]
