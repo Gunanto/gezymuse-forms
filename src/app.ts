@@ -4,6 +4,7 @@ import { initDb, ensureAdmin } from "./db";
 import { loginHandler, logoutHandler, requireAuth } from "./auth";
 import adminRoutes from "./admin";
 import pubRoutes from "./public";
+import resultsRoutes from "./results";
 
 // bootApp: siapkan DB + admin, kembalikan aplikasi Hono (tanpa listen,
 // supaya bisa dipakai langsung oleh bun test via app.request()).
@@ -36,9 +37,10 @@ export async function bootApp(dataDir: string) {
   app.post("/api/logout", logoutHandler);
   app.get("/api/me", requireAuth, (c) => c.json({ user: c.get("user") }));
 
-  // API Tahap 2 (builder admin) + Tahap 3 (responden publik). Tahap 4 (hasil) menyusul.
+  // API Tahap 2 (builder admin) + Tahap 3 (responden publik) + Tahap 4 (hasil).
   app.route("/api", adminRoutes);
   app.route("/api/public", pubRoutes);
+  app.route("/api", resultsRoutes);
 
   app.get("/admin", (c) => c.redirect("/admin.html"));
 

@@ -108,3 +108,25 @@ textarea:focus, select:focus { outline: none; border-color: var(--navy); }
 }
 .toast.err { background: #b3261e; }
 h3 { color: var(--navy); font-size: 16px; margin: 14px 0 8px; }
+
+/* ---- Tahap 4: hasil ---- */
+.tabs { display: flex; gap: 8px; margin-top: 14px; border-bottom: 2px solid var(--line); }
+.tab {
+  background: none; border: none; padding: 10px 18px; font-size: 15px; font-weight: 600;
+  color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.bar-label { flex: none; width: 140px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar { flex: 1; height: 18px; background: #eef2f8; border-radius: 9px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--navy); border-radius: 9px; transition: width .3s; }
+.bar-num { flex: none; width: 44px; text-align: right; font-size: 14px; font-weight: 700; color: var(--navy); }
+.samples { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.sample { background: #fbfcfe; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+.quizline { background: #eef7ee; border: 1px solid #c8e6c9; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #1b5e20; }
+.rtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rtable th, .rtable td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.rtable th { color: var(--navy); font-size: 13px; text-transform: uppercase; letter-spacing: .4px; }
+.rtable td.nowrap, td.nowrap { white-space: nowrap; }
+.detail-qa { border-top: 1px solid var(--line); padding: 10px 0; }
+.detail-qa > div:last-child { margin-top: 4px; font-size: 15px; }

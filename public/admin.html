@@ -125,7 +125,32 @@
       </div>
     </div>
   </section>
+
+  <section id="resultsView" hidden>
+    <button id="btnBack2" class="btn ghost small">← Semua formulir</button>
+    <div class="card">
+      <h2 id="resTitle">Hasil</h2>
+      <p class="muted" id="resCount"></p>
+      <div class="row">
+        <a id="btnCsv" class="btn small" href="#">⬇ Ekspor CSV</a>
+        <a id="btnWord" class="btn small ghost" href="#">⬇ Ekspor Word</a>
+      </div>
+      <div class="tabs">
+        <button id="tabSummary" class="tab active">Ringkasan</button>
+        <button id="tabResponses" class="tab">Respons</button>
+      </div>
+    </div>
+    <div id="resSummary"></div>
+    <div id="resResponses" hidden>
+      <div id="respDetail"></div>
+      <div class="card">
+        <div id="respTable"></div>
+        <div id="respPager" class="row" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </section>
 </div>
 <script src="/js/admin.js"></script>
+<script src="/js/results.js"></script>
 </body>
 </html>

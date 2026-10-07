@@ -57,13 +57,19 @@ deploy/
 | GET | /f/:slug | — | halaman responden publik |
 | GET | /api/public/forms/:slug | — | skema soal publik (tanpa kunci jawaban; hormati acak/publish/deadline/batas) |
 | POST | /api/public/forms/:slug/submit | — | kirim jawaban `{respondent_name?, respondent_class?, answers}` → validasi server-side, cegah ganda, skor otomatis bila kuis (rate-limit 20x/IP/10 mnt) |
+| GET | /api/forms/:id/responses | sesi | daftar respons (paginasi `?page&limit`) |
+| GET | /api/forms/:id/responses/:rid | sesi | detail satu respons + jawabannya |
+| DELETE | /api/forms/:id/responses/:rid | sesi | hapus satu respons |
+| GET | /api/forms/:id/summary | sesi | ringkasan per soal (hitungan opsi, rata-rata skala, sampel teks, akurasi kuis) |
+| GET | /api/forms/:id/export.csv | sesi | unduh CSV (BOM, escaping benar) |
+| GET | /api/forms/:id/export/word | sesi | unduh Word (.doc tabel) |
 
 ## Tahapan
 
 1. ✅ Fondasi: server + DB + auth + health + file deploy
 2. ✅ Builder: CRUD form & soal (6 tipe MVP), admin UI
 3. ✅ Responden: halaman /f/:slug ala Google Forms + submit tervalidasi
-4. Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
+4. ✅ Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
 5. Kuis: kunci jawaban, skor otomatis server-side
 6. Hardening: rate-limit submit, backup, uji penuh
 

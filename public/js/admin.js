@@ -38,7 +38,7 @@ function toast(msg, isErr = false) {
 }
 
 function show(view) {
-  for (const v of ["loginCard", "dashView", "editorView"]) $(v).hidden = v !== view;
+  for (const v of ["loginCard", "dashView", "editorView", "resultsView"]) $(v).hidden = v !== view;
   $("btnLogout").hidden = view === "loginCard";
 }
 
@@ -95,7 +95,7 @@ async function loadDashboard() {
           <button class="btn small" data-act="edit" data-id="${f.id}">Kelola</button>
           <button class="btn small ghost" data-act="dup" data-id="${f.id}">Duplikat</button>
           <button class="btn small ghost" data-act="del" data-id="${f.id}" data-title="${esc(f.title)}">Hapus</button>
-          <button class="btn small ghost" disabled title="Hadir di Tahap 4">Hasil</button>
+          <button class="btn small ghost" data-act="results" data-id="${f.id}">Hasil</button>
         </div>
       </div>`
       )
@@ -106,6 +106,7 @@ async function loadDashboard() {
         if (b.dataset.act === "edit") openEditor(id);
         else if (b.dataset.act === "dup") duplicateForm(id);
         else if (b.dataset.act === "del") deleteForm(id, b.dataset.title);
+        else if (b.dataset.act === "results") openResults(Number(id));
       })
     );
   } catch (e) {
