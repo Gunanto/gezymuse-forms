@@ -44,12 +44,22 @@ deploy/
 | POST | /api/login | — | `{username, password}` → cookie sesi (rate-limit 10x/IP/10 mnt) |
 | POST | /api/logout | — | hapus sesi |
 | GET | /api/me | sesi | info user login |
+| GET | /api/forms | sesi | daftar formulir (+ jumlah soal & respons) |
+| POST | /api/forms | sesi | buat formulir `{title, description?, settings?}` → slug otomatis |
+| GET | /api/forms/:id | sesi | detail formulir + daftar soal |
+| PATCH | /api/forms/:id | sesi | ubah judul/deskripsi/publish/settings |
+| DELETE | /api/forms/:id | sesi | hapus formulir (cascade) |
+| POST | /api/forms/:id/duplicate | sesi | duplikat formulir + soal (slug baru, status draf) |
+| POST | /api/forms/:id/questions | sesi | tambah soal (6 tipe, tervalidasi) |
+| PATCH | /api/questions/:qid | sesi | ubah soal (parsial, validasi penuh) |
+| DELETE | /api/questions/:qid | sesi | hapus soal |
+| POST | /api/forms/:id/questions/reorder | sesi | susun ulang soal `{order: [id...]}` |
 | GET | /f/:slug | — | halaman responden publik |
 
 ## Tahapan
 
 1. ✅ Fondasi: server + DB + auth + health + file deploy
-2. Builder: CRUD form & soal (6 tipe MVP), admin UI
+2. ✅ Builder: CRUD form & soal (6 tipe MVP), admin UI
 3. Responden: render `/f/:slug`, validasi server-side, cegah ganda
 4. Hasil: tabel respons, grafik ringkasan, ekspor CSV/Word
 5. Kuis: kunci jawaban, skor otomatis server-side

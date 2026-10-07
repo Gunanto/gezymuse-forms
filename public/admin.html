@@ -7,11 +7,15 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<div class="wrap">
+<div class="wrap wide">
   <header class="brand">
     <span class="logo">📝</span>
     <div><h1>GezyForm</h1><p>Admin formulir</p></div>
+    <div class="spacer"></div>
+    <button id="btnLogout" class="btn ghost small" hidden>Keluar</button>
   </header>
+
+  <div id="toast" class="toast" hidden></div>
 
   <section id="loginCard" class="card" hidden>
     <h2>Masuk</h2>
@@ -25,49 +29,103 @@
     <button id="btnLogin" class="btn">Masuk</button>
   </section>
 
-  <section id="dashCard" class="card" hidden>
-    <h2>Halo, <span id="who"></span> 👋</h2>
-    <p>Fondasi <b>Tahap 1</b> berjalan: server + database + login + rate-limit.</p>
-    <p>Builder formulir hadir di <b>Tahap 2</b>.</p>
-    <button id="btnLogout" class="btn ghost">Keluar</button>
+  <section id="dashView" hidden>
+    <div class="card">
+      <h2>＋ Formulir baru</h2>
+      <label>Judul
+        <input id="newTitle" placeholder="cth: Survei Kepuasan Belajar">
+      </label>
+      <label>Deskripsi
+        <textarea id="newDesc" rows="2" placeholder="Opsional — tampil di atas formulir"></textarea>
+      </label>
+      <button id="btnCreate" class="btn">Buat formulir</button>
+    </div>
+    <div id="formList"></div>
+  </section>
+
+  <section id="editorView" hidden>
+    <button id="btnBack" class="btn ghost small">← Semua formulir</button>
+
+    <div class="card">
+      <h2>Pengaturan formulir</h2>
+      <label>Judul
+        <input id="fTitle">
+      </label>
+      <label>Deskripsi
+        <textarea id="fDesc" rows="2"></textarea>
+      </label>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="fPublished"> Publikasikan (bisa diisi responden)</label>
+      </div>
+      <div class="linkrow">
+        <span class="muted">Link publik:</span>
+        <code id="fLink"></code>
+        <button id="btnCopy" class="btn small">Salin</button>
+        <a id="fOpen" class="btn small ghost" target="_blank" rel="noopener">Buka</a>
+      </div>
+      <button id="btnSaveMeta" class="btn">Simpan</button>
+    </div>
+
+    <div class="card">
+      <h2>Opsi pengumpulan</h2>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="sAccept"> Terima respons</label>
+        <label class="check"><input type="checkbox" id="sQuiz"> Mode kuis (ada kunci & nilai)</label>
+        <label class="check"><input type="checkbox" id="sShowScore"> Tampilkan nilai setelah submit</label>
+        <label class="check"><input type="checkbox" id="sName"> Wajib isi nama</label>
+        <label class="check"><input type="checkbox" id="sShQ"> Acak urutan soal</label>
+        <label class="check"><input type="checkbox" id="sShO"> Acak urutan opsi</label>
+      </div>
+      <div class="row">
+        <label>Batas waktu (opsional)
+          <input type="datetime-local" id="sDeadline">
+        </label>
+        <label>Maks. respons (opsional)
+          <input type="number" id="sMaxResp" min="1" placeholder="tanpa batas">
+        </label>
+      </div>
+      <button id="btnSaveSettings" class="btn">Simpan opsi</button>
+    </div>
+
+    <div class="card">
+      <h2>Soal (<span id="qCount">0</span>)</h2>
+      <div id="qList"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="qFormTitle">＋ Tambah soal</h2>
+      <label>Tipe soal
+        <select id="qType"></select>
+      </label>
+      <label>Pertanyaan
+        <textarea id="qPrompt" rows="2" placeholder="Tulis pertanyaan di sini…"></textarea>
+      </label>
+      <div id="qOptions"></div>
+      <div id="qScale" hidden>
+        <div class="row">
+          <label>Nilai min<input type="number" id="sMin" value="1"></label>
+          <label>Nilai maks<input type="number" id="sMax" value="5"></label>
+        </div>
+        <div class="row">
+          <label>Label min<input id="sMinLabel" placeholder="cth: Sangat tidak setuju"></label>
+          <label>Label maks<input id="sMaxLabel" placeholder="cth: Sangat setuju"></label>
+        </div>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="qRequired"> Wajib diisi</label>
+        <label>Poin (kuis)<input type="number" id="qPoints" value="0" min="0" max="1000"></label>
+      </div>
+      <div id="qCorrectWrap" hidden>
+        <h3>Kunci jawaban</h3>
+        <div id="qCorrect"></div>
+      </div>
+      <div class="row">
+        <button id="btnSaveQ" class="btn">Simpan soal</button>
+        <button id="btnCancelQ" class="btn ghost" hidden>Batal</button>
+      </div>
+    </div>
   </section>
 </div>
-<script>
-const $ = (id) => document.getElementById(id);
-
-async function refresh() {
-  const r = await fetch("/api/me");
-  if (r.ok) {
-    const { user } = await r.json();
-    $("who").textContent = user.username;
-    $("loginCard").hidden = true;
-    $("dashCard").hidden = false;
-  } else {
-    $("loginCard").hidden = false;
-    $("dashCard").hidden = true;
-  }
-}
-
-$("btnLogin").addEventListener("click", async () => {
-  $("loginErr").hidden = true;
-  const r = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: $("username").value, password: $("password").value }),
-  });
-  if (r.ok) { $("password").value = ""; refresh(); }
-  else {
-    const j = await r.json().catch(() => ({}));
-    $("loginErr").textContent = j.error || "Gagal masuk";
-    $("loginErr").hidden = false;
-  }
-});
-$("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnLogin").click(); });
-$("btnLogout").addEventListener("click", async () => {
-  await fetch("/api/logout", { method: "POST" });
-  refresh();
-});
-refresh();
-</script>
+<script src="/js/admin.js"></script>
 </body>
 </html>
