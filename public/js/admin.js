@@ -187,7 +187,6 @@ async function openEditor(id) {
     $("sAccept").checked = s.accept_responses !== false;
     $("sQuiz").checked = !!s.is_quiz;
     $("sShowScore").checked = s.show_score !== false;
-    $("sName").checked = s.require_name !== false;
     $("sShQ").checked = !!s.shuffle_questions;
     $("sShO").checked = !!s.shuffle_options;
     $("sDeadline").value = toLocalInput(s.deadline);
@@ -486,7 +485,6 @@ async function saveSettings() {
         accept_responses: $("sAccept").checked,
         is_quiz: $("sQuiz").checked,
         show_score: $("sShowScore").checked,
-        require_name: $("sName").checked,
         shuffle_questions: $("sShQ").checked,
         shuffle_options: $("sShO").checked,
         deadline: dl ? new Date(dl).toISOString() : null,

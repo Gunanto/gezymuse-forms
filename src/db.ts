@@ -45,8 +45,6 @@ const MIGRATIONS: string[] = [
   `CREATE TABLE IF NOT EXISTS responses (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      form_id INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
-     respondent_name TEXT NOT NULL DEFAULT '',
-     respondent_class TEXT NOT NULL DEFAULT '',
      score REAL,
      submitted_at TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_responses_form ON responses(form_id)`,
@@ -72,6 +70,12 @@ export function initDb(dataDir: string): Database {
       db.exec(MIGRATIONS[i]);
       db.query("INSERT INTO schema_migrations (version) VALUES (?)").run(v);
     }
+  }
+  // 2026-10-07: kolom identitas bawaan (respondent_name/respondent_class) dihapus —
+  // Nama/Kelas kini dibuat manual sebagai soal oleh admin.
+  for (const col of ["respondent_name", "respondent_class"]) {
+    const exists = db.query("SELECT 1 FROM pragma_table_info('responses') WHERE name = ?").get(col);
+    if (exists) db.exec(`ALTER TABLE responses DROP COLUMN ${col}`);
   }
   _db = db;
   return db;

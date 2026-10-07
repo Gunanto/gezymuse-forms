@@ -86,7 +86,6 @@ describe("Tahap 3 — API publik responden", () => {
     const qs = (await (await pubGet(slug)).json()).questions;
     const byPrompt = Object.fromEntries(qs.map((q: any) => [q.prompt, q.id]));
     const r = await pubSubmit(slug, {
-      respondent_name: "Budi", respondent_class: "7A",
       answers: {
         [byPrompt["Nama panggilan"]]: "Bud",
         [byPrompt["Warna favorit"]]: "Biru",
@@ -98,13 +97,12 @@ describe("Tahap 3 — API publik responden", () => {
     expect((await r.json()).ok).toBe(true);
   });
 
-  test("tanpa nama (require_name) -> 400; soal wajib kosong -> 400", async () => {
+  test("soal wajib kosong -> 400", async () => {
     let r = await pubSubmit(slug, { answers: {} }, "10.0.0.3");
     expect(r.status).toBe(400);
     const qs = (await (await pubGet(slug)).json()).questions;
     const byPrompt = Object.fromEntries(qs.map((q: any) => [q.prompt, q.id]));
     r = await pubSubmit(slug, {
-      respondent_name: "Ani",
       answers: { [byPrompt["Nama panggilan"]]: "An" }, // warna favorit (wajib) kosong
     }, "10.0.0.3");
     expect(r.status).toBe(400);
@@ -114,33 +112,31 @@ describe("Tahap 3 — API publik responden", () => {
     const qs = (await (await pubGet(slug)).json()).questions;
     const byPrompt = Object.fromEntries(qs.map((q: any) => [q.prompt, q.id]));
     let r = await pubSubmit(slug, {
-      respondent_name: "Cici",
       answers: { [byPrompt["Nama panggilan"]]: "Ci", [byPrompt["Warna favorit"]]: "Ungu" },
     }, "10.0.0.4");
     expect(r.status).toBe(400);
     r = await pubSubmit(slug, {
-      respondent_name: "Cici",
       answers: { [byPrompt["Nama panggilan"]]: "Ci", [byPrompt["Warna favorit"]]: "Biru", [byPrompt["Puas?"]]: 9 },
     }, "10.0.0.4");
     expect(r.status).toBe(400);
   });
 
-  test("nama ganda -> 409", async () => {
+  test("isi sama boleh dikirim ulang (tidak ada cegah nama ganda)", async () => {
     const qs = (await (await pubGet(slug)).json()).questions;
     const byPrompt = Object.fromEntries(qs.map((q: any) => [q.prompt, q.id]));
     const body = {
-      respondent_name: "Budi", respondent_class: "7A",
       answers: { [byPrompt["Nama panggilan"]]: "Bud", [byPrompt["Warna favorit"]]: "Merah" },
     };
-    const r = await pubSubmit(slug, body, "10.0.0.5");
-    expect(r.status).toBe(409);
+    let r = await pubSubmit(slug, body, "10.0.0.5");
+    expect(r.status).toBe(200);
+    r = await pubSubmit(slug, body, "10.0.0.5");
+    expect(r.status).toBe(200);
   });
 
   test("kuis: semua benar -> skor penuh; salah -> 0", async () => {
     const qs = (await (await pubGet(quizSlug)).json()).questions;
     const byPrompt = Object.fromEntries(qs.map((q: any) => [q.prompt, q.id]));
     let r = await pubSubmit(quizSlug, {
-      respondent_name: "Dedi",
       answers: { [byPrompt["1+1"]]: "2", [byPrompt["Genap"]]: ["2", "4"], [byPrompt["Pilih 4"]]: 4 },
     }, "10.0.0.6");
     expect(r.status).toBe(200);
@@ -149,7 +145,6 @@ describe("Tahap 3 — API publik responden", () => {
     expect(j.total_points).toBe(35);
     // salah sebagian: PG salah, checkbox kurang satu
     r = await pubSubmit(quizSlug, {
-      respondent_name: "Eka",
       answers: { [byPrompt["1+1"]]: "3", [byPrompt["Genap"]]: ["2"], [byPrompt["Pilih 4"]]: 4 },
     }, "10.0.0.7");
     j = await r.json();
@@ -163,7 +158,7 @@ describe("Tahap 3 — API publik responden", () => {
       { qtype: "short_text", prompt: "Isi", points: 10, correct_answer: "x" });
     await adminReq(`/api/forms/${form.id}`, "PATCH", { is_published: true });
     const qs = (await (await pubGet(form.slug)).json()).questions;
-    const r = await pubSubmit(form.slug, { respondent_name: "Fajar", answers: { [qs[0].id]: "x" } }, "10.0.0.8");
+    const r = await pubSubmit(form.slug, { answers: { [qs[0].id]: "x" } }, "10.0.0.8");
     const j = await r.json();
     expect(r.status).toBe(200);
     expect("score" in j).toBe(false);
@@ -180,14 +175,14 @@ describe("Tahap 3 — API publik responden", () => {
     r = await pubGet(form.slug);
     expect(r.status).toBe(403);
     await adminReq(`/api/forms/${form.id}`, "PATCH", { settings: { accept_responses: true, deadline: null, max_responses: 1 } });
-    r = await pubSubmit(form.slug, { respondent_name: "Gina", answers: {} }, "10.0.0.9");
+    r = await pubSubmit(form.slug, { answers: {} }, "10.0.0.9");
     expect(r.status).toBe(200);
-    r = await pubSubmit(form.slug, { respondent_name: "Hadi", answers: {} }, "10.0.0.10");
+    r = await pubSubmit(form.slug, { answers: {} }, "10.0.0.10");
     expect(r.status).toBe(403);
   });
 
   test("rate-limit submit: 20x -> 429", async () => {
-    const f = await adminReq("/api/forms", "POST", { title: "RL", settings: { require_name: false } });
+    const f = await adminReq("/api/forms", "POST", { title: "RL" });
     const form = (await f.json()).form;
     await adminReq(`/api/forms/${form.id}/questions`, "POST", { qtype: "short_text", prompt: "Isi" });
     await adminReq(`/api/forms/${form.id}`, "PATCH", { is_published: true });

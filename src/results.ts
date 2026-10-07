@@ -45,7 +45,7 @@ results.get("/forms/:id/responses", (c) => {
   const total = (db.query("SELECT COUNT(*) AS n FROM responses WHERE form_id = ?").get(form.id) as any).n;
   const rows = db
     .query(
-      "SELECT id, respondent_name, respondent_class, score, submitted_at FROM responses WHERE form_id = ? ORDER BY submitted_at DESC, id DESC LIMIT ? OFFSET ?"
+      "SELECT id, score, submitted_at FROM responses WHERE form_id = ? ORDER BY submitted_at DESC, id DESC LIMIT ? OFFSET ?"
     )
     .all(form.id, limit, (page - 1) * limit);
   return c.json({ responses: rows, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
@@ -56,7 +56,7 @@ results.get("/forms/:id/responses/:rid", (c) => {
   const form = getForm(db, c.req.param("id"));
   if (!form) return notFound(c);
   const r = db
-    .query("SELECT id, respondent_name, respondent_class, score, submitted_at FROM responses WHERE id = ? AND form_id = ?")
+    .query("SELECT id, score, submitted_at FROM responses WHERE id = ? AND form_id = ?")
     .get(c.req.param("rid"), form.id) as any;
   if (!r) return c.json({ error: "Respons tidak ditemukan" }, 404);
   const answers = db
@@ -203,7 +203,7 @@ function exportMatrix(db: ReturnType<typeof getDb>, form: any) {
   const questions = orderedQuestions(db, form.id);
   const settings = JSON.parse(form.settings || "{}");
   const responses = db
-    .query("SELECT id, respondent_name, respondent_class, score, submitted_at FROM responses WHERE form_id = ? ORDER BY submitted_at ASC, id ASC")
+    .query("SELECT id, score, submitted_at FROM responses WHERE form_id = ? ORDER BY submitted_at ASC, id ASC")
     .all(form.id) as any[];
   const ansRows = db
     .query("SELECT response_id, question_id, value FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)")
@@ -213,11 +213,11 @@ function exportMatrix(db: ReturnType<typeof getDb>, form: any) {
     if (!byResp.has(a.response_id)) byResp.set(a.response_id, new Map());
     byResp.get(a.response_id)!.set(a.question_id, JSON.parse(a.value));
   }
-  const head = ["No", "Nama", "Kelas", "Waktu Submit"];
+  const head = ["No", "Waktu Submit"];
   if (settings.is_quiz) head.push("Skor");
   for (const q of questions) head.push(q.prompt.length > 40 ? q.prompt.slice(0, 40) + "…" : q.prompt);
   const body = responses.map((r, i) => {
-    const row: unknown[] = [i + 1, r.respondent_name, r.respondent_class, r.submitted_at];
+    const row: unknown[] = [i + 1, r.submitted_at];
     if (settings.is_quiz) row.push(r.score ?? "");
     const m = byResp.get(r.id);
     for (const q of questions) row.push(fmtValue(m?.get(q.id)));

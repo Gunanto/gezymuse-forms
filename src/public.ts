@@ -89,7 +89,6 @@ pub.get("/forms/:slug", (c) => {
       settings: {
         is_quiz: !!s.is_quiz,
         show_score: s.show_score !== false,
-        require_name: s.require_name !== false,
         deadline: s.deadline || null,
       },
     },
@@ -198,25 +197,10 @@ pub.post("/forms/:slug/submit", async (c) => {
     validated.push({ qid: q.id, valueJson: JSON.stringify(v.value), score: qs, correct });
   }
 
-  const name = typeof body.respondent_name === "string" ? body.respondent_name.trim().slice(0, 100) : "";
-  const cls = typeof body.respondent_class === "string" ? body.respondent_class.trim().slice(0, 50) : "";
-  if (s.require_name !== false && !name)
-    return c.json({ error: "Nama wajib diisi" }, 400);
-
-  // Cegah isi ganda: satu nama (+kelas) satu respons.
-  if (s.require_name !== false) {
-    const dup = db
-      .query(
-        "SELECT 1 FROM responses WHERE form_id = ? AND lower(respondent_name) = lower(?) AND lower(respondent_class) = lower(?)"
-      )
-      .get(av.form.id, name, cls);
-    if (dup) return c.json({ error: "Nama ini sudah mengisi formulir." }, 409);
-  }
-
   const tx = db.transaction(() => {
     const info = db
-      .query("INSERT INTO responses (form_id, respondent_name, respondent_class, score) VALUES (?, ?, ?, ?)")
-      .run(av.form.id, name, cls, isQuiz ? score : null);
+      .query("INSERT INTO responses (form_id, score) VALUES (?, ?)")
+      .run(av.form.id, isQuiz ? score : null);
     const rid = Number(info.lastInsertRowid);
     const ins = db.query("INSERT INTO answers (response_id, question_id, value) VALUES (?, ?, ?)");
     for (const a of validated) ins.run(rid, a.qid, a.valueJson);

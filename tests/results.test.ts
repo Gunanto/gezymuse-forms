@@ -56,9 +56,9 @@ beforeAll(async () => {
   await adminReq(`/api/forms/${formId}`, "PATCH", { is_published: true });
 
   const [cWarna, cHobi, cPuas, cKesan] = qids;
-  await submit({ respondent_name: "Aldi", answers: { [cWarna]: "Merah", [cHobi]: ["Bola"], [cPuas]: 5, [cKesan]: "Seru" } });
-  await submit({ respondent_name: "Bela", answers: { [cWarna]: "Merah", [cHobi]: ["Musik"], [cPuas]: 3, [cKesan]: "Biasa" } });
-  await submit({ respondent_name: 'Caca, "Si" Manis', answers: { [cWarna]: "Biru", [cHobi]: ["Bola", "Musik"], [cPuas]: 4, [cKesan]: "Luar biasa, mantap!" } });
+  await submit({ answers: { [cWarna]: "Merah", [cHobi]: ["Bola"], [cPuas]: 5, [cKesan]: "Seru" } });
+  await submit({ answers: { [cWarna]: "Merah", [cHobi]: ["Musik"], [cPuas]: 3, [cKesan]: "Biasa" } });
+  await submit({ answers: { [cWarna]: "Biru", [cHobi]: ["Bola", "Musik"], [cPuas]: 4, [cKesan]: 'Luar biasa, "mantap"!' } });
 });
 
 describe("Tahap 4 — hasil & ekspor", () => {
@@ -117,14 +117,14 @@ describe("Tahap 4 — hasil & ekspor", () => {
     const qid = (await q.json()).question.id;
     await adminReq(`/api/forms/${form.id}`, "PATCH", { is_published: true });
     const s = (await (await adminReq(`/api/forms/${form.id}`)).json()).form.slug;
-    const sub = (name: string, ip: string, val: string) =>
+    const sub = (ip: string, val: string) =>
       app.request(`/api/public/forms/${s}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
-        body: JSON.stringify({ respondent_name: name, answers: { [qid]: val } }),
+        body: JSON.stringify({ answers: { [qid]: val } }),
       });
-    await sub("X1", "10.2.0.1", "Jakarta");
-    await sub("X2", "10.2.0.2", "Bandung");
+    await sub("10.2.0.1", "Jakarta");
+    await sub("10.2.0.2", "Bandung");
     const r = await adminReq(`/api/forms/${form.id}/summary`);
     const qq = (await r.json()).questions[0];
     expect(qq.quiz.has_key).toBe(true);
@@ -141,11 +141,11 @@ describe("Tahap 4 — hasil & ekspor", () => {
     expect([...buf.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // BOM UTF-8
     const t = buf.slice(3).toString("utf-8");
     const lines = t.split("\r\n");
-    expect(lines[0]).toContain("Nama");
+    expect(lines[0]).toContain("Waktu Submit");
     expect(lines[0]).toContain("Warna");
     expect(lines.length).toBe(4); // header + 3 respons
-    expect(t).toContain('"Caca, ""Si"" Manis"'); // escaping benar
-    expect(t).toContain("Luar biasa, mantap!");
+    expect(t).toContain('"Luar biasa, ""mantap""!"'); // escaping benar
+    expect(t).not.toContain("Caca");
   });
 
   test("ekspor Word: tabel HTML .doc", async () => {
@@ -156,7 +156,7 @@ describe("Tahap 4 — hasil & ekspor", () => {
     const t = await r.text();
     expect(t).toContain("<table>");
     expect(t).toContain("Survei Hasil");
-    expect(t).toContain("Aldi");
+    expect(t).toContain("Waktu Submit");
   });
 
   test("hapus respons -> berkurang; hapus id asing -> 404", async () => {

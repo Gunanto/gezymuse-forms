@@ -54,7 +54,6 @@ function render() {
   document.title = f.title + " — GezyForm";
   $("fTitle").textContent = f.title;
   $("fDesc").textContent = f.description || "";
-  if (f.settings.require_name) $("identityCard").hidden = false;
   const showPoints = !!f.settings.is_quiz;
   $("qList").innerHTML = schema.questions
     .map((q) => `<div class="gf-card gf-q" data-card="${q.id}">${inputFor(q, showPoints)}</div>`)
@@ -108,11 +107,7 @@ async function submit() {
     const r = await fetch(`/api/public/forms/${encodeURIComponent(slug)}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        respondent_name: $("rName") ? $("rName").value : "",
-        respondent_class: $("rClass") ? $("rClass").value : "",
-        answers,
-      }),
+      body: JSON.stringify({ answers }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || `Gagal mengirim (HTTP ${r.status})`);

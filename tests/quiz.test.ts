@@ -60,7 +60,6 @@ describe("Tahap 5 — mode kuis", () => {
   test("submit: review berisi benar/salah + kunci + manual", async () => {
     const [pg, teks, skala] = qids;
     const r = await pubSubmit(slug, {
-      respondent_name: "Q1",
       answers: { [pg]: "Daun", [teks]: "karena cahaya", [skala]: 2 },
     });
     expect(r.status).toBe(200);
@@ -82,7 +81,7 @@ describe("Tahap 5 — mode kuis", () => {
   test("tanpa show_score -> tanpa review & tanpa skor", async () => {
     await adminReq(`/api/forms/${formId}`, "PATCH", { settings: { is_quiz: true, show_score: false } });
     const [pg] = qids;
-    const r = await pubSubmit(slug, { respondent_name: "Q2", answers: { [pg]: "Daun" } });
+    const r = await pubSubmit(slug, { answers: { [pg]: "Daun" } });
     const j = await r.json();
     expect(r.status).toBe(200);
     expect("score" in j).toBe(false);
@@ -94,7 +93,7 @@ describe("Tahap 5 — mode kuis", () => {
     const f = await adminReq("/api/forms", "POST", { title: "NonKuis" });
     const form = (await f.json()).form;
     await adminReq(`/api/forms/${form.id}`, "PATCH", { is_published: true });
-    const r = await pubSubmit(form.slug, { respondent_name: "Q3", answers: {} });
+    const r = await pubSubmit(form.slug, { answers: {} });
     expect("review" in await r.json()).toBe(false);
   });
 

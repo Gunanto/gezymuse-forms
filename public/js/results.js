@@ -98,25 +98,23 @@ function renderResponses(j) {
   const rows = j.responses
     .map(
       (r) => `<tr>
-        <td>${esc(r.respondent_name || "—")}</td>
-        <td>${esc(r.respondent_class || "—")}</td>
         <td class="small">${esc(r.submitted_at)}</td>
         ${isQuiz ? `<td><strong>${r.score ?? "—"}</strong> <button class="btn small ghost" data-s="${r.id}" data-v="${r.score ?? 0}" title="Koreksi skor manual">ubah</button></td>` : ""}
         <td class="nowrap">
           <button class="btn small ghost" data-v="${r.id}">Lihat</button>
-          <button class="btn small ghost" data-d="${r.id}" data-n="${esc(r.respondent_name || "tanpa nama")}">Hapus</button>
+          <button class="btn small ghost" data-d="${r.id}">Hapus</button>
         </td>
       </tr>`
     )
     .join("");
   $("respTable").innerHTML = j.total
-    ? `<table class="rtable"><thead><tr><th>Nama</th><th>Kelas</th><th>Waktu</th>${isQuiz ? "<th>Skor</th>" : ""}<th>Aksi</th></tr></thead><tbody>${rows}</tbody></table>`
+    ? `<table class="rtable"><thead><tr><th>Waktu</th>${isQuiz ? "<th>Skor</th>" : ""}<th>Aksi</th></tr></thead><tbody>${rows}</tbody></table>`
     : `<p class="muted">Belum ada respons.</p>`;
   $("respTable").querySelectorAll("[data-v]").forEach((b) =>
     b.addEventListener("click", () => viewResponse(Number(b.dataset.v)))
   );
   $("respTable").querySelectorAll("[data-d]").forEach((b) =>
-    b.addEventListener("click", () => delResponse(Number(b.dataset.d), b.dataset.n))
+    b.addEventListener("click", () => delResponse(Number(b.dataset.d)))
   );
   $("respTable").querySelectorAll("[data-s]").forEach((b) =>
     b.addEventListener("click", () => editScore(Number(b.dataset.s), Number(b.dataset.v)))
@@ -137,7 +135,7 @@ async function viewResponse(rid) {
   try {
     const { response, answers } = await api(`/api/forms/${R.formId}/responses/${rid}`);
     $("respDetail").innerHTML = `<div class="card">
-      <h3>📄 ${esc(response.respondent_name || "Tanpa nama")}${response.respondent_class ? " · " + esc(response.respondent_class) : ""}
+      <h3>📄 Respons #${response.id}
       ${R.form.settings.is_quiz ? ` · Skor: <strong>${response.score ?? "—"}</strong>` : ""}</h3>
       <p class="muted small">${esc(response.submitted_at)}</p>
       ${answers.map((a) => `<div class="detail-qa"><div class="muted small">${esc(a.prompt)}</div><div>${esc(fmtVal(a.value)) || "<span class='muted'>—</span>"}</div></div>`).join("")}
@@ -169,8 +167,8 @@ async function editScore(rid, cur) {
   }
 }
 
-async function delResponse(rid, name) {
-  if (!confirm(`Hapus respons dari "${name}"?`)) return;
+async function delResponse(rid) {
+  if (!confirm(`Hapus respons #${rid}?`)) return;
   try {
     await api(`/api/forms/${R.formId}/responses/${rid}`, "DELETE");
     $("respDetail").innerHTML = "";

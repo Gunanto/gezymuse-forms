@@ -119,7 +119,6 @@ export interface FormSettings {
   max_responses: number | null;
   is_quiz: boolean;
   show_score: boolean;
-  require_name: boolean;
   shuffle_questions: boolean;
   shuffle_options: boolean;
 }
@@ -130,7 +129,6 @@ export const SETTING_DEFAULTS: FormSettings = {
   max_responses: null,
   is_quiz: false,
   show_score: true,
-  require_name: true,
   shuffle_questions: false,
   shuffle_options: false,
 };
@@ -139,7 +137,6 @@ const BOOL_KEYS = [
   "accept_responses",
   "is_quiz",
   "show_score",
-  "require_name",
   "shuffle_questions",
   "shuffle_options",
 ] as const;
