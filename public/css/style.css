@@ -176,6 +176,7 @@ h3 { color: var(--navy); font-size: 16px; margin: 14px 0 8px; }
 }
 .gf-desc:focus { outline: none; border-bottom: 2px solid #673ab7; }
 .gf-qcard { border-left: 6px solid #4285f4; }
+.gf-cardtitle { font-size: 14px; font-weight: 600; color: #5f6368; margin-bottom: 10px; }
 .gf-qcard-head { display: flex; gap: 16px; margin-bottom: 12px; }
 .gf-qtitle {
   flex: 1; border: none; border-bottom: 1px solid #dadce0; border-radius: 0;

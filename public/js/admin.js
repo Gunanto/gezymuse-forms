@@ -390,6 +390,7 @@ function resetQForm() {
   $("btnCancelQ").hidden = true;
   $("btnDupQ").hidden = true;
   $("btnDelQ").hidden = true;
+  $("qFormTitle").textContent = "Pertanyaan baru";
   $("qType").value = "short_text";
   $("qPrompt").value = "";
   $("qRequired").checked = false;
@@ -403,6 +404,7 @@ function startEdit(id) {
   const q = state.questions.find((x) => x.id === id);
   if (!q) return;
   state.editingQ = q;
+  $("qFormTitle").textContent = "Ubah pertanyaan";
   $("btnCancelQ").hidden = false;
   $("btnDupQ").hidden = false;
   $("btnDelQ").hidden = false;
@@ -571,9 +573,21 @@ $("btnPublishTop").addEventListener("click", async () => {
     toast(next ? "Formulir dipublikasikan — bisa diisi responden" : "Publikasi dibatalkan");
   } catch (e) { toast(e.message, true); }
 });
-$("tbAdd").addEventListener("click", () => {
+$("tbAdd").addEventListener("click", async () => {
   showPane("Q");
-  resetQForm();
+  if (state.editingQ) {
+    // Sedang mengedit soal: jangan ganggu draf editan, cukup arahkan ke panel
+  } else {
+    // Jika ada draf yang diketik, simpan dulu supaya tidak hilang (seperti Google Forms)
+    if ($("qPrompt").value.trim()) {
+      try {
+        await api(`/api/forms/${state.form.id}/questions`, "POST", collectQuestion());
+        toast("Soal ditambahkan");
+        await refreshEditor();
+      } catch (e) { toast(e.message, true); return; }
+    }
+    resetQForm();
+  }
   $("qEditorCard").scrollIntoView({ behavior: "smooth", block: "center" });
   setTimeout(() => $("qPrompt").focus(), 350);
 });
