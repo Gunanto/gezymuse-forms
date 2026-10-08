@@ -318,7 +318,7 @@ function renderQuestions() {
           ${q.validation === "nama" ? `<span class="badge" title="Validasi nama: kapital otomatis, maks 30 karakter">🔤 nama</span>` : ""}
           ${state.form.settings.is_quiz ? `<span class="badge">${q.points} poin</span>` : ""}
         </div>
-        <div class="muted small">${esc(qPreview(q))}</div>
+        ${CHOICE_TYPES.includes(q.qtype) ? qOptionRows(q) : `<div class="muted small">${esc(qPreview(q))}</div>`}
       </div>
       <div class="qactions icons">
         <button class="iconbtn" data-a="up" data-id="${q.id}" title="Naik" ${i === 0 ? "disabled" : ""}>↑</button>
@@ -333,6 +333,63 @@ function renderQuestions() {
   box.querySelectorAll("button[data-a]").forEach((b) =>
     b.addEventListener("click", () => qAction(b.dataset.a, Number(b.dataset.id)))
   );
+  box.querySelectorAll("button[data-delopt]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const [qid, idx] = b.dataset.delopt.split(":").map(Number);
+      delOption(qid, idx);
+    })
+  );
+}
+
+// Daftar opsi di kartu soal (pilihan ganda/kotak centang/dropdown),
+// lengkap dengan tombol × untuk menghapus satu opsi.
+function qOptionRows(q) {
+  if (!CHOICE_TYPES.includes(q.qtype)) return "";
+  const mark = q.qtype === "checkboxes" ? "☐" : q.qtype === "dropdown" ? "▾" : "○";
+  return (
+    `<div class="gf-qopts">` +
+    q.options
+      .map(
+        (op, i) =>
+          `<div class="gf-qopt"><span class="gf-qopt-mark">${mark}</span>` +
+          `<span class="gf-qopt-text">${esc(op)}</span>` +
+          `<button class="iconbtn gf-qopt-x" data-delopt="${q.id}:${i}" title="Hapus opsi ini">×</button></div>`
+      )
+      .join("") +
+    `</div>`
+  );
+}
+
+async function delOption(qid, idx) {
+  const q = state.questions.find((x) => x.id === qid);
+  if (!q || !CHOICE_TYPES.includes(q.qtype)) return;
+  if (q.options.length <= 2) {
+    toast("Opsi minimal 2 — hapus soalnya sekalian kalau memang tidak dipakai.", true);
+    return;
+  }
+  const label = q.options[idx];
+  try {
+    const r = await api(`/api/forms/${state.form.id}/responses?limit=1`);
+    const msg =
+      r.total > 0
+        ? `Formulir ini sudah memiliki ${r.total} jawaban.\n\nHapus opsi "${label}"?\nJawaban lama yang memilih opsi ini tidak akan terhitung di ringkasan.`
+        : `Hapus opsi "${label}"?`;
+    if (!confirm(msg)) return;
+    const options = q.options.filter((_, i) => i !== idx);
+    // Kunci jawaban menyimpan TEKS opsi, jadi cukup buang yang terhapus.
+    let ca = q.correct_answer;
+    if (Array.isArray(ca)) {
+      ca = ca.filter((x) => x !== label);
+      if (!ca.length) ca = null;
+    } else if (ca === label) {
+      ca = null;
+    }
+    await api(`/api/questions/${qid}`, "PATCH", { options, correct_answer: ca });
+    await refreshEditor();
+    toast("Opsi dihapus");
+  } catch (e) {
+    toast(e.message, true);
+  }
 }
 
 function qPreview(q) {
