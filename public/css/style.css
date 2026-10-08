@@ -112,6 +112,10 @@ textarea:focus, select:focus { outline: none; border-color: var(--navy); }
 }
 .gf-qopt:hover .gf-qopt-x, .gf-qopt-x:focus { opacity: 1; }
 .gf-qopt-x:hover { color: #b3261e; background: #fdecea; }
+/* Tampilan skala linier di kartu soal */
+.gf-qscale { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.gf-qscale .gf-qopt { padding: 0; }
+.gf-qscale-end { font-size: 13px; color: #6b7280; }
 .toast {
   position: sticky; top: 12px; z-index: 50;
   background: #1e3a5f; color: #fff;

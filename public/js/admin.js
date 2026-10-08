@@ -318,7 +318,7 @@ function renderQuestions() {
           ${q.validation === "nama" ? `<span class="badge" title="Validasi nama: kapital otomatis, maks 30 karakter">🔤 nama</span>` : ""}
           ${state.form.settings.is_quiz ? `<span class="badge">${q.points} poin</span>` : ""}
         </div>
-        ${CHOICE_TYPES.includes(q.qtype) ? qOptionRows(q) : `<div class="muted small">${esc(qPreview(q))}</div>`}
+        ${q.qtype === "linear_scale" ? qScaleRows(q) : CHOICE_TYPES.includes(q.qtype) ? qOptionRows(q) : `<div class="muted small">${esc(qPreview(q))}</div>`}
       </div>
       <div class="qactions icons">
         <button class="iconbtn" data-a="up" data-id="${q.id}" title="Naik" ${i === 0 ? "disabled" : ""}>↑</button>
@@ -356,6 +356,24 @@ function qOptionRows(q) {
           `<button class="iconbtn gf-qopt-x" data-delopt="${q.id}:${i}" title="Hapus opsi ini">×</button></div>`
       )
       .join("") +
+    `</div>`
+  );
+}
+
+// Tampilan skala linier di kartu soal: deret angka berbulatan + label ujung.
+function qScaleRows(q) {
+  const o = q.options || {};
+  const min = Number(o.min) || 1;
+  const max = Number(o.max) || 5;
+  let nums = "";
+  for (let n = min; n <= max; n++) {
+    nums += `<span class="gf-qopt"><span class="gf-qopt-mark">○</span><span class="gf-qopt-text">${n}</span></span>`;
+  }
+  return (
+    `<div class="gf-qscale">` +
+    (o.minLabel ? `<span class="gf-qscale-end">${esc(o.minLabel)}</span>` : "") +
+    nums +
+    (o.maxLabel ? `<span class="gf-qscale-end">${esc(o.maxLabel)}</span>` : "") +
     `</div>`
   );
 }
@@ -512,8 +530,10 @@ function collectCorrect() {
     const v = $("cAnswer") ? $("cAnswer").value : "";
     return v || null;
   }
-  if (t === "checkboxes")
-    return [...document.querySelectorAll(".cCheck")].filter((c) => c.checked).map((c) => c.value);
+  if (t === "checkboxes") {
+    const checked = [...document.querySelectorAll(".cCheck")].filter((c) => c.checked).map((c) => c.value);
+    return checked.length ? checked : null;
+  }
   if (t === "linear_scale") {
     const v = $("cNumber") ? $("cNumber").value : "";
     return v === "" ? null : Number(v);
